@@ -1,0 +1,1 @@
+any mqtt autodiscovery should be inside the app logic

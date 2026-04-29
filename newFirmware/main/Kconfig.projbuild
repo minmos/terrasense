@@ -1,0 +1,32 @@
+# main/Kconfig.projbuild
+
+menu "Terracotta Network Configuration"
+    config WIFI_SSID
+        string "WiFi SSID"
+        default "yourWifiSSID"
+        
+    config WIFI_PASSWORD
+        string "WiFi Password"
+        default "supersecretpassword"
+
+    config WIFI_HOSTNAME
+        string "Device Hostname"
+        default "yourdevicehostname"
+        help
+            The name this device will broadcast to the router (DHCP client name).
+endmenu
+
+menu "Terracotta MQTT Configuration"
+    config MQTT_BROKER_URI
+        string "MQTT Broker URI"
+        default "mqtt://192.168.178.2:1883"
+        help
+            The full URI to your MQTT broker (e.g., mqtt://IP_ADDRESS:PORT).
+
+    config MQTT_BASE_TOPIC
+        string "MQTT Base Topic"
+        default "your_mqtt_basetopic"
+        help
+            The root topic for this specific device. All publishes will 
+            be formatted as: [BASE_TOPIC]/[subtopic]
+endmenu
