@@ -1,80 +1,77 @@
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
+// System & Core Components
 #include "sys_utils.h"
 #include "sys_config.h"
-#include "net_core.h"
 #include "sys_led.h" 
-#include "net_mqtt.h" // Add the new include
+#include "sys_ota.h" 
 
-// This is the builtin LED on ESP32-C6
+// Network Components
+#include "net_core.h"
+#include "net_mqtt.h" 
+
+// Application Logic (Future includes)
+// #include "app_sensors.h"  // For I2C (BME280) and ADC (Soil Moisture)
+// #include "app_relays.h"   // For GPIO (Heater, Pump, Vents)
+// #include "app_control.h"  // The brain: turns on heater if temp is low
+
+// Global Handles
 sys_debug_led_t builtin_status_led;
+#define GPIO_BUILTIN_LED 8
 
-
-// The callback function that gets triggered when a message arrives
-static void on_mqtt_message_received(const char *topic, const char *payload)
+// ============================================================================
+// 1. MQTT ROUTING DISPATCHER
+// ============================================================================
+// As this grows, you will move this entire function to an `app_mqtt_router.c` file.
+// For now, it lives here, acting as the switchboard for incoming cloud commands.
+static void mqtt_router_callback(const char *topic, const char *payload)
 {
     SYS_LOG("INCOMING MQTT -> Topic: %s | Payload: %s", topic, payload);
     
-    // Later, you will route this to your app_logic!
-    // e.g., if (strcmp(topic, "terracotta/cmd/heater") == 0) { ... }
-}
+    // --- System Commands ---
+    if (strstr(topic, "cmd/update") != NULL) {
+        SYS_LOG("OTA Command Received!");
+        sys_ota_start(&builtin_status_led, payload);
+        return;
+    }
 
-// --- Home Assistant Auto-Discovery Routine ---
-static void publish_ha_discovery(void)
-{
-    SYS_LOG("Publishing Home Assistant Auto-Discovery Data...");
-
-    // The topic must be: homeassistant/<component>/<node_id>/<object_id>/config
-    const char *discovery_topic = "homeassistant/sensor/terracotta/temperature/config";
-
-    // Buffer needs to be large enough to hold the JSON (512 bytes is safe here)
-    char payload[512];
+    // --- Actuator Commands (Future) ---
+    /*
+    if (strstr(topic, "cmd/heater") != NULL) {
+        // e.g., app_relays_set_heater(atoi(payload));
+        return;
+    }
+    if (strstr(topic, "cmd/pump") != NULL) {
+        // e.g., app_relays_trigger_watering();
+        return;
+    }
+    */
     
-    // Build the JSON string. 
-    // Notice the "dev" block: this groups all your sensors under one "Terracotta" device in HA!
-    snprintf(payload, sizeof(payload),
-        "{"
-        "\"name\":\"Greenhouse Temperature\","
-        "\"state_topic\":\"terracotta/sensor/temp\","
-        "\"value_template\":\"{{ value_json.temp }}\","
-        "\"unit_of_measurement\":\"°C\","
-        "\"device_class\":\"temperature\","
-        "\"unique_id\":\"terracotta_temp_1\","
-        "\"device\":{"
-            "\"identifiers\":[\"terracotta_c6_01\"],"
-            "\"name\":\"Terracotta Controller\","
-            "\"manufacturer\":\"Theo\""
-        "}"
-        "}"
-    );
-    // snprintf(payload, sizeof(payload),
-    //     "{"
-    //     "\"name\":\"Greenhouse Temperature\","
-    //     "\"stat_t\":\"terracotta/sensor/temp\","
-    //     "\"val_tpl\":\"{{ value_json.temp }}\","
-    //     "\"unit_of_meas\":\"°C\","
-    //     "\"dev_cla\":\"temperature\","
-    //     "\"dev\":{"
-    //         "\"identifiers\":[\"terracotta_c6_01\"],"
-    //         "\"name\":\"Terracotta Controller\","
-    //         "\"manufacturer\":\"Theo\""
-    //     "}"
-    //     "}"
-    // );
-
-    // Publish using our new raw function. QoS 1, Retain 1 (Crucial!)
-    ESP_ERROR_CHECK(net_mqtt_publish_raw(discovery_topic, payload, 1, 1));
+    // --- Configuration Commands (Future) ---
+    /*
+    if (strstr(topic, "cmd/target_temp") != NULL) {
+        // e.g., app_control_set_target_temp(atof(payload));
+        return;
+    }
+    */
 }
 
-
+// ============================================================================
+// MAIN APPLICATION ENTRY
+// ============================================================================
 void app_main(void)
 {
-    vTaskDelay(pdMS_TO_TICKS(2000)); 
-    
-    sys_led_init(&builtin_status_led, 8, 1); 
+    // Give hardware power-rails a moment to stabilize before slamming the bus
+    vTaskDelay(pdMS_TO_TICKS(500)); 
+
+    // ------------------------------------------------------------------------
+    // PHASE 1: Core System Initialization
+    // ------------------------------------------------------------------------
+    sys_led_init(&builtin_status_led, GPIO_BUILTIN_LED, 1); 
     sys_led_set_state(&builtin_status_led, SYS_LED_STATE_BOOTING);
 
     SYS_LOG("=========================================");
@@ -88,38 +85,55 @@ void app_main(void)
     }
     SYS_ERR_CHECK(ret, "Failed to initialize NVS");
 
-    net_core_init(&builtin_status_led);
+    // ------------------------------------------------------------------------
+    // PHASE 2: Hardware Peripherals & App State (Future)
+    // ------------------------------------------------------------------------
+    // SYS_LOG("Initializing Hardware Peripherals...");
+    // app_sensors_init();   // Sets up I2C bus and ADC pins
+    // app_relays_init();    // Configures GPIO pins to output and sets them LOW
+    // app_control_init();   // Loads saved target temps from NVS
 
+    // ------------------------------------------------------------------------
+    // PHASE 3: Network & Middleware Initialization
+    // ------------------------------------------------------------------------
+    SYS_LOG("Initializing Networking Stack...");
+    net_core_init(&builtin_status_led);
+    
+    // Wait for IP (In the future, use FreeRTOS Event Groups instead of a blind delay)
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    SYS_LOG("Boot complete. Entering DAY mode.");
-    sys_led_set_state(&builtin_status_led, SYS_LED_STATE_OK_DAY);
-    
-    // 1. Initialize MQTT, give it the LED and the Callback
-    SYS_LOG("Init of mqtt");
-    net_mqtt_init(&builtin_status_led, on_mqtt_message_received);
-
+    net_mqtt_init(&builtin_status_led, mqtt_router_callback);
     net_mqtt_start();
-    SYS_LOG("now after pause we publish auto discovery mqtt message");
-    vTaskDelay(pdMS_TO_TICKS(2000)); // Give it a moment to connect
+    vTaskDelay(pdMS_TO_TICKS(2000)); 
+
+    // Subscribe to all relevant command topics
+    net_mqtt_subscribe("cmd/update", 1);
+    // net_mqtt_subscribe("cmd/heater", 1);
+    // net_mqtt_subscribe("cmd/target_temp", 1);
+
+    SYS_LOG("Boot sequence complete. Entering standard operation.");
+    sys_led_set_state(&builtin_status_led, SYS_LED_STATE_OK_DAY);
+
+    // ------------------------------------------------------------------------
+    // PHASE 4: Spawn Background Application Tasks
+    // ------------------------------------------------------------------------
+    // Instead of doing work in the main loop, we spawn dedicated tasks.
+    // This allows the ESP32 to run sensors on Core 0 and networking on Core 1!
     
-    publish_ha_discovery();
-    SYS_LOG("mqtt auto discovery message was sent");
-    // 4. Subscribe to a command topic using your clever Subtopic system
-    net_mqtt_subscribe("cmd/target_temp", 1); 
+    // xTaskCreate(app_sensors_read_task, "sensor_task", 4096, NULL, 5, NULL);
+    // xTaskCreate(app_control_logic_task, "control_task", 4096, NULL, 4, NULL);
 
-    int loop_counter = 0;
+    // ------------------------------------------------------------------------
+    // PHASE 5: The Main Loop (System Monitor)
+    // ------------------------------------------------------------------------
+    // Since all heavy lifting is now handled by FreeRTOS tasks and callbacks,
+    // the main loop is relegated to a slow-ticking system monitor or watchdog.
+    uint32_t uptime_minutes = 0;
     while (1) {
-        // Publish a fake sensor reading every 5 seconds
-        if ((loop_counter % 3) == 0)
-        {
-            char payload[32];
-            snprintf(payload, sizeof(payload), "{\"temp\": 24.%d}", loop_counter);
-            // This will publish to: "terracotta/sensor/temp"
-            net_mqtt_publish("sensor/temp", payload, 1, 0); 
-        }
-
-        loop_counter++;
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        // e.g., Print memory usage statistics or uptime
+        SYS_LOG("System Uptime: %lu minutes | Free Heap: %lu bytes", uptime_minutes, esp_get_free_heap_size());
+        
+        uptime_minutes++;
+        vTaskDelay(pdMS_TO_TICKS(60000)); // Tick once per minute
     }
 }
