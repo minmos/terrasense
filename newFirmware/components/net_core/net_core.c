@@ -12,7 +12,6 @@
 
 #include "net_core.h"
 #include "sys_utils.h"
-#include "sys_config.h" 
 #include "sys_led.h"
 
 static sys_debug_led_t *builtin_status_led = NULL;

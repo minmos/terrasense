@@ -7,7 +7,6 @@
 
 #include "net_mqtt.h"
 #include "sys_utils.h"
-#include "sys_config.h"
 
 
 // State variables
