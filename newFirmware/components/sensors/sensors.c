@@ -2,6 +2,7 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "sys_utils.h"
+#include "sys_config.h"
 
 #include "sensors.h"
 #include "sensor_ds18b20.h"
@@ -40,34 +41,27 @@ static void sensor_polling_task(void *pvParameter)
     }
 }
 
-// --- Public API ---
-void sensors_init(int onewire_pin, const ds18b20_target_t *ds18b20_targets, int ds18b20_count)
+void sensors_init(void)
 {
-    // Safety check: Don't overflow our internal memory cap
-    if (ds18b20_count > SENSOR_COMPONENT_MAX_CAPACITY) {
-        SYS_LOG_ERR("WARNING: Configured sensors (%d) exceeds max capacity (%d)! Capping.", 
-                    ds18b20_count, SENSOR_COMPONENT_MAX_CAPACITY);
-        ds18b20_count = SENSOR_COMPONENT_MAX_CAPACITY;
+    // 2. Read directly from the config macros
+    int configured_count = HARDWARE_DS18B20_COUNT;
+
+    if (configured_count > SENSOR_COMPONENT_MAX_CAPACITY) {
+        SYS_LOG_ERR("WARNING: Configured sensors exceed max capacity!");
+        configured_count = SENSOR_COMPONENT_MAX_CAPACITY;
     }
 
-    current_data.ds18b20_count = ds18b20_count;
+    current_data.ds18b20_count = configured_count;
 
-    // Fill the initial state with INVALID values
     for (int i = 0; i < SENSOR_COMPONENT_MAX_CAPACITY; i++) {
         current_data.ds18b20_temps[i] = SENSOR_VALUE_INVALID;
     }
 
-    // Create the Mutex lock
     sensor_mutex = xSemaphoreCreateMutex();
-    if (sensor_mutex == NULL) {
-        SYS_LOG_ERR("Failed to create sensor mutex!");
-        return;
-    }
 
-    // Pass the Read-Only targets straight down to the worker
-    sensor_ds18b20_init(onewire_pin, ds18b20_targets, current_data.ds18b20_count);
+    // 3. Pass the config macros down to the worker
+    sensor_ds18b20_init(ONEWIRE_BUS_GPIO, HARDWARE_DS18B20_CONFIG, current_data.ds18b20_count);
 
-    // Spawn the background polling task on Core 0 (since C6 is single-core)
     xTaskCreate(sensor_polling_task, "sensor_task", 4096, NULL, 5, NULL);
 }
 

@@ -5,7 +5,7 @@
 #include "nvs_flash.h"
 
 // System & Core Components
-#include "hardware_pin_config.h"
+#include "sys_config.h"
 #include "sys_utils.h"
 #include "sys_led.h" 
 #include "sys_ota.h" 
@@ -15,7 +15,7 @@
 #include "net_mqtt.h" 
 
 // Application Logic (Future includes)
-#include "sensors.h"  // For I2C (BME280) and ADC (Soil Moisture)
+#include "sensors.h"  // For I2C (SHT35) etc...
 // #include "app_relays.h"   // For GPIO (Heater, Pump, Vents)
 // #include "app_control.h"  // The brain: turns on heater if temp is low
 
@@ -23,12 +23,6 @@
 sys_debug_led_t builtin_status_led;
 #define GPIO_BUILTIN_LED 8
 
-// #include "onewire_bus.h"
-// #include "ds18b20.h"
-
-// #define ONEWIRE_BUS_GPIO 18
-// #define EXAMPLE_ONEWIRE_BUS_GPIO    18
-// #define EXAMPLE_ONEWIRE_MAX_DS18B20 2
 
 // ============================================================================
 // 1. MQTT ROUTING DISPATCHER
@@ -99,7 +93,9 @@ void app_main(void)
     // app_sensors_init();   // Sets up I2C bus and ADC pins
     // app_relays_init();    // Configures GPIO pins to output and sets them LOW
     // app_control_init();   // Loads saved target temps from NVS
-    sensors_init(ONEWIRE_BUS_GPIO, HARDWARE_DS18B20_CONFIG, HARDWARE_DS18B20_COUNT);
+    // sensors_init(ONEWIRE_BUS_GPIO, HARDWARE_DS18B20_CONFIG, HARDWARE_DS18B20_COUNT);
+    sensors_init();
+
 
     // ------------------------------------------------------------------------
     // PHASE 3: Network & Middleware Initialization
@@ -136,6 +132,69 @@ void app_main(void)
     // ------------------------------------------------------------------------
     // Since all heavy lifting is now handled by FreeRTOS tasks and callbacks,
     // the main loop is relegated to a slow-ticking system monitor or watchdog.
+
+    
+    sensor_data_t current_env_data;
+    while (1) {
+        // Safely fetch a copy of the latest background readings
+        if (sensors_get_data(&current_env_data)) {
+            SYS_LOG("--- ENVIRONMENT UPDATE TESTING OTA UPDATE---");
+            
+            for (int i = 0; i < current_env_data.ds18b20_count; i++) {
+                float temp = current_env_data.ds18b20_temps[i];
+                
+                if (temp != SENSOR_VALUE_INVALID) {
+                    SYS_LOG("%s: %.2f °C", HARDWARE_DS18B20_CONFIG[i].name, temp);
+                } else {
+                    SYS_LOG_ERR("%s: OFFLINE", HARDWARE_DS18B20_CONFIG[i].name);
+                }
+            }
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(30000));
+    }
+
+    // uint32_t uptime_minutes = 0;
+    // while (1) {
+    //     ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion_for_all(bus));
+    //     float temperature;
+    //     ESP_ERROR_CHECK(ds18b20_get_temperature(ds18b20s[0], &temperature));
+    //     SYS_LOG( "temperature read from DS18B20[0]: %.2fC", temperature);
+    //     // e.g., Print memory usage statistics or uptime
+    //     size_t heap = esp_get_free_heap_size();
+    //     if (heap >= 1024 * 1024) {
+    //         SYS_LOG("System Uptime: %lu minutes | Free Heap: %.2f MB", uptime_minutes, heap / (1024.0 * 1024.0));
+    //     } else if (heap >= 1024) {
+    //         SYS_LOG("System Uptime: %lu minutes | Free Heap: %.2f KB", uptime_minutes, heap / 1024.0);
+    //     } else {
+    //         SYS_LOG("System Uptime: %lu minutes | Free Heap: %u bytes", uptime_minutes, (unsigned int)heap);
+    //     }
+        
+    //     uptime_minutes++;
+    //     vTaskDelay(pdMS_TO_TICKS(5000)); // Tick once per minute
+    // }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//TODO maybe provide small project to discover DS18B20 addresses
+// #include "onewire_bus.h"
+// #include "ds18b20.h"
+
+// #define ONEWIRE_BUS_GPIO 18
+// #define EXAMPLE_ONEWIRE_BUS_GPIO    18
+// #define EXAMPLE_ONEWIRE_MAX_DS18B20 2
 
     // SYS_LOG("Initializing 1-Wire Bus on GPIO %d...", ONEWIRE_BUS_GPIO);
     
@@ -179,45 +238,3 @@ void app_main(void)
     // } while (search_result != ESP_ERR_NOT_FOUND);
     // ESP_ERROR_CHECK(onewire_del_device_iter(iter));
     // SYS_LOG( "Searching done, %d DS18B20 device(s) found", ds18b20_device_num);
-
-    
-    sensor_data_t current_env_data;
-    while (1) {
-        // Safely fetch a copy of the latest background readings
-        if (sensors_get_data(&current_env_data)) {
-            SYS_LOG("--- ENVIRONMENT UPDATE ---");
-            
-            for (int i = 0; i < current_env_data.ds18b20_count; i++) {
-                float temp = current_env_data.ds18b20_temps[i];
-                
-                if (temp != SENSOR_VALUE_INVALID) {
-                    SYS_LOG("%s: %.2f °C", HARDWARE_DS18B20_CONFIG[i].name, temp);
-                } else {
-                    SYS_LOG_ERR("%s: OFFLINE", HARDWARE_DS18B20_CONFIG[i].name);
-                }
-            }
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(30000));
-    }
-
-    // uint32_t uptime_minutes = 0;
-    // while (1) {
-    //     ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion_for_all(bus));
-    //     float temperature;
-    //     ESP_ERROR_CHECK(ds18b20_get_temperature(ds18b20s[0], &temperature));
-    //     SYS_LOG( "temperature read from DS18B20[0]: %.2fC", temperature);
-    //     // e.g., Print memory usage statistics or uptime
-    //     size_t heap = esp_get_free_heap_size();
-    //     if (heap >= 1024 * 1024) {
-    //         SYS_LOG("System Uptime: %lu minutes | Free Heap: %.2f MB", uptime_minutes, heap / (1024.0 * 1024.0));
-    //     } else if (heap >= 1024) {
-    //         SYS_LOG("System Uptime: %lu minutes | Free Heap: %.2f KB", uptime_minutes, heap / 1024.0);
-    //     } else {
-    //         SYS_LOG("System Uptime: %lu minutes | Free Heap: %u bytes", uptime_minutes, (unsigned int)heap);
-    //     }
-        
-    //     uptime_minutes++;
-    //     vTaskDelay(pdMS_TO_TICKS(5000)); // Tick once per minute
-    // }
-}

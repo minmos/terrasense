@@ -3,11 +3,9 @@
 #include <stdint.h>
 
 #define SENSOR_VALUE_INVALID (-999.0f)
+#define SENSOR_COMPONENT_MAX_CAPACITY 8 // A generous memory cap for the background struct (8 sensors = 32 bytes of RAM)
 
-// A generous memory cap for the background struct (8 sensors = 32 bytes of RAM)
-#define SENSOR_COMPONENT_MAX_CAPACITY 8
-
-// Struct used by hardware_pin_config.h
+// Struct used by sys_config.h to define which sensor and corresponding address we have
 typedef struct {
     const char *name;
     uint64_t rom_address;
@@ -20,5 +18,5 @@ typedef struct {
 } sensor_data_t;
 
 // API
-void sensors_init(int onewire_pin, const ds18b20_target_t *ds18b20_targets, int ds18b20_count);
+void sensors_init();
 bool sensors_get_data(sensor_data_t *out_data);
