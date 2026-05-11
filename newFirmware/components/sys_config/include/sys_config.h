@@ -36,7 +36,10 @@
 // --- Sensor Pins ---
 #define ONEWIRE_BUS_GPIO 18
 
-//* --- DS18B20 Sensor Configuration ---
+//* --- DS18B20 Sensor Configurations ---
+// Set to 1 to enable DS18B20 sensors, 0 to disable entirely
+#define HARDWARE_DS18B20_ENABLED 0
+#if HARDWARE_DS18B20_ENABLED
 //! ADHERE TO NAMING SCHEME FROM mqtt_namingscheme.md
 static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
     { .name = "Temporärer Temp DS18B20-Sensor", .mqtt_device_id = "ds18b20_temporaryplaceholder", .rom_address = 0x133C6CF64930E728 },
@@ -44,6 +47,9 @@ static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
 };
 // The compiler counts how many DS18B20 sensors we have, need to know the size for creating correct sensor_data_t struct
 #define HARDWARE_DS18B20_COUNT (sizeof(HARDWARE_DS18B20_CONFIG) / sizeof(HARDWARE_DS18B20_CONFIG[0]))
+#else
+#define HARDWARE_DS18B20_COUNT 0
+#endif
 
 
 

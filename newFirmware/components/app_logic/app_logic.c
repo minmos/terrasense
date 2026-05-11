@@ -18,6 +18,7 @@ static void run_hass_discovery(void)
     SYS_LOG("Publishing HASS discovery...");
 
     //* DS18B20 sensor discover
+#if HARDWARE_DS18B20_ENABLED
     SYS_LOG("DS18B20 sensors HASS discovery...");
     for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
         ha_discovery_config_t cfg = {
@@ -33,6 +34,7 @@ static void run_hass_discovery(void)
         };
         hass_discovery_publish(&cfg);
     }
+#endif
 
     // Future sensor types go here, same pattern:
     // for (int i = 0; i < HARDWARE_SHT_COUNT; i++) { ... }
@@ -72,17 +74,16 @@ static void sensor_data_publish_task(void *pvParameters)
         }
 
         // --- DS18B20 temperatures ---
+#if HARDWARE_DS18B20_ENABLED
         for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
             if (data.ds18b20_temps[i] == SENSOR_VALUE_INVALID) {
-                SYS_LOG_ERR("%s: OFFLINE, skipping publish.", HARDWARE_DS18B20_CONFIG[i].name);
+                SYS_LOG_ERR("%s: OFFLINE, skipping.", HARDWARE_DS18B20_CONFIG[i].name);
                 continue;
             }
-
             cJSON *root = cJSON_CreateObject();
             cJSON_AddNumberToObject(root, "temperature", data.ds18b20_temps[i]);
             char *payload = cJSON_PrintUnformatted(root);
 
-            // Expands to e.g: "terrasense/this_is_a_terrarium_id/sensor/ds18b20_temporaryplaceholder/state"
             char state_topic[128];
             snprintf(state_topic, sizeof(state_topic),
                      MQTT_STATE_TOPIC("sensor", "%s"),
@@ -94,6 +95,7 @@ static void sensor_data_publish_task(void *pvParameters)
             free(payload);
             cJSON_Delete(root);
         }
+#endif
 
         // Future sensor types go here, same pattern:
         // for (int i = 0; i < HARDWARE_SHT_COUNT; i++) { ... }
@@ -118,7 +120,9 @@ static void sensor_log_task(void *pvParameters)
             continue;
         }
 
-        SYS_LOG("--- ENVIRONMENT OTA UPDATE ---");
+        SYS_LOG("--- ENVIRONMENT UPDATE ---");
+
+#if HARDWARE_DS18B20_ENABLED
         for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
             if (data.ds18b20_temps[i] != SENSOR_VALUE_INVALID) {
                 SYS_LOG("%s: %.2f C", HARDWARE_DS18B20_CONFIG[i].name, data.ds18b20_temps[i]);
@@ -126,6 +130,7 @@ static void sensor_log_task(void *pvParameters)
                 SYS_LOG_ERR("%s: OFFLINE", HARDWARE_DS18B20_CONFIG[i].name);
             }
         }
+#endif
     }
 }
 

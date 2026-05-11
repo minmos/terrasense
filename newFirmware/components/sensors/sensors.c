@@ -20,20 +20,19 @@ static void sensor_polling_task(void *pvParameter)
     SYS_LOG("Sensor polling task started.");
     
     // currently only for ds18b20 sensors
+#if HARDWARE_DS18B20_ENABLED
     float temp_buffer[SENSOR_DS18B20_COMPONENT_MAX_CAPACITY];
+#endif
     while (1) {
+#if HARDWARE_DS18B20_ENABLED
         sensor_ds18b20_read(temp_buffer);
-
-        // 2. Lock the Mutex to update the global public state
         if (xSemaphoreTake(sensor_mutex, portMAX_DELAY) == pdTRUE) {
-            
-            for(int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
+            for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
                 current_sensor_data.ds18b20_temps[i] = temp_buffer[i];
             }
-            
             xSemaphoreGive(sensor_mutex);
         }
-
+#endif
         // delay next sensor values fetching
         vTaskDelay(pdMS_TO_TICKS(SENSOR_FETCHING_INTERVAL));
     }
@@ -41,21 +40,18 @@ static void sensor_polling_task(void *pvParameter)
 
 void sensors_init(void)
 {
-    // error checks
+#if HARDWARE_DS18B20_ENABLED
     if (HARDWARE_DS18B20_COUNT > SENSOR_DS18B20_COMPONENT_MAX_CAPACITY) {
-        SYS_LOG_ERR("WARNING: Configured sensors exceed max capacity!");
+        SYS_LOG_ERR("Configured DS18B20 sensors exceed max capacity!");
         configASSERT(0);
     }
-    // init sensor data object with invalid values
     for (int i = 0; i < SENSOR_DS18B20_COMPONENT_MAX_CAPACITY; i++) {
         current_sensor_data.ds18b20_temps[i] = SENSOR_VALUE_INVALID;
     }
+    sensor_ds18b20_init(ONEWIRE_BUS_GPIO, HARDWARE_DS18B20_CONFIG, HARDWARE_DS18B20_COUNT);
+#endif
 
     sensor_mutex = xSemaphoreCreateMutex();
-
-    // 3. Pass the config macros down to the worker
-    sensor_ds18b20_init(ONEWIRE_BUS_GPIO, HARDWARE_DS18B20_CONFIG, HARDWARE_DS18B20_COUNT);
-
     xTaskCreate(sensor_polling_task, "sensor_task", 4096, NULL, 5, NULL);
 }
 
