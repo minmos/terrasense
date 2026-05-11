@@ -19,3 +19,5 @@ esp_err_t net_mqtt_subscribe(const char *subtopic, int qos);
 
 // for absolute topics like Home Assistant Discovery
 esp_err_t net_mqtt_publish_raw(const char *full_topic, const char *payload, int qos, int retain);
+
+bool net_mqtt_is_connected(void);

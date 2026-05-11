@@ -7,9 +7,9 @@ This document defines a structured MQTT topic scheme for managing multiple terra
 Basic pattern:  
 `terrariums/<terrarium_id>/<component_type>/<device_id>/<attribute>`
 
-- **terrariums** – fixed domain prefix  
+- **terrariums** – fixed domain prefix, equivalent to `MQTT_BASE_TOPIC` in `sys_config.h`
 - **<terrarium_id>** – unique identifier per terrarium (e.g., `rainforest_01`, `desert_03`)  
-- **<component_type>** – one of: `sensor`, `actuator`, `number`, `fan`, `binary_sensor`  
+- **<component_type>** – one of: `sensor`, `switch`, `number`, `fan`, `binary_sensor`  
 - **<device_id>** – logical name of the physical device + unique suffix/description, concatinated with `_` (e.g., `ds18b20_toprightcorner`, `ssr_heatinglamp`)  
 - **<attribute>** – e.g., `state`, `command`, `temperature`, `humidity`, `speed`
 
@@ -41,7 +41,7 @@ Payload contains `state_topic`, `command_topic` (if applicable), `device`, `uniq
 | Topic type | Pattern | Example |
 |------------|---------|---------|
 | State (read-only) | `terrariums/<terrarium_id>/<component_type>/<device_id>/state` | `terrariums/rainforest_01/sensor/ambient_sht35/state` |
-| Command (write) | `terrariums/<terrarium_id>/<component_type>/<device_id>/command` | `terrariums/rainforest_01/actuator/misting_ssr/command` |
+| Command (write) | `terrariums/<terrarium_id>/<component_type>/<device_id>/command` | `terrariums/rainforest_01/switch/misting_ssr/command` |
 
 **Rule:**  
 - `state` → device publishes measurements/status
@@ -53,7 +53,7 @@ Payload contains `state_topic`, `command_topic` (if applicable), `device`, `uniq
 
 #### **OneWire – DS18B20** (temperature)  
 - Component: `sensor`  
-- Device ID: `onewire_ds18b20_<serial_suffix>`  
+- Device ID: `ds18b20_<serial_suffix>`  
 - Topics:  
   - State: `terrariums/rainforest_01/sensor/ds18b20_toprightcorner/state` (payload: `{"temperature": 25.3}`)  
   - Auto-discovery: `homeassistant/sensor/terrariums-rainforest_01-_ds18b20_toprightcorner/config`
@@ -74,15 +74,15 @@ State topics:
 
 #### **Simple I/O – XKC-Y25 (water detection)**  
 Component: `binary_sensor`  
-Device ID: `water_leak_xkc_y25`  
-State topic: `terrariums/rainforest_01/binary_sensor/water_leak_xkc_y25/state` (payload: `{"water_detected": true}` or just `ON`/`OFF`)
+Device ID: `water_detector_suffix`  
+State topic: `terrariums/rainforest_01/binary_sensor/water_detector_suffix/state` (payload: `{"water_detected": true}` or just `1`/`0`)
 
 ### Actuators
 
 #### **Simple I/O – SSR (Misting, Lights, Heating)**  
-Component: `actuator` (or `switch`)  
+Component: `switch` 
 Device ID: `ssr_misting`, `ssr_lights`, `ssr_heater`  
-Command topic: `terrariums/rainforest_01/actuator/ssr_misting/command` (payload: `ON`/`OFF`)  
+Command topic: `terrariums/rainforest_01/switch/ssr_misting/command` (payload: `ON`/`OFF`)  
 
 #### **Fan Control – 3‑pin & 4‑pin fans**  
 For 3‑pin (voltage control) / 4‑pin (PWM) – both benefit from separate speed control.  

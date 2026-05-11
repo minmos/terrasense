@@ -8,7 +8,7 @@
 // Struct used by sys_config.h to define which sensor and corresponding address we have
 typedef struct {
     const char *name;
-    const char *mqtt_suffix; // used for mqtt auto discovery
+    const char *mqtt_device_id; 
     uint64_t rom_address; 
 } ds18b20_target_t;
 

@@ -7,17 +7,20 @@
 
 #include "net_mqtt.h"
 #include "sys_utils.h"
+#include "sys_config.h"
+
 
 
 // State variables
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static sys_debug_led_t *builtin_status_led = NULL;
 static mqtt_message_cb_t app_msg_cb = NULL;
+static bool mqtt_connected = false;
 
 // Helper to format the full topic: "BASE_TOPIC/subtopic"
 static void get_full_topic(const char *subtopic, char *out_buffer, size_t max_len)
 {
-    snprintf(out_buffer, max_len, "%s/%s", CONFIG_MQTT_BASE_TOPIC, subtopic);
+    snprintf(out_buffer, max_len, "%s/%s", MQTT_BASE_TOPIC, subtopic);
 }
 
 // --- MQTT Event Handler ---
@@ -27,12 +30,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
+            mqtt_connected = true; 
             SYS_LOG("Connected to MQTT Broker!");
+            esp_mqtt_client_publish(mqtt_client, MQTT_AVAILABILITY_TOPIC, "online", 0, 1, 1);
             // Restore normal LED state if we recovered from an error
             if (builtin_status_led) sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_DAY);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
+            mqtt_connected = false; 
             SYS_LOG_WARN("Disconnected from MQTT Broker.");
             if (builtin_status_led) sys_led_set_state(builtin_status_led, SYS_LED_STATE_ERROR);
             break;
@@ -78,7 +84,7 @@ void net_mqtt_init(sys_debug_led_t *led_obj, mqtt_message_cb_t msg_cb)
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
     SYS_ERR_CHECK(esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL), "Failed to register MQTT events");
     
-    SYS_LOG("MQTT Initialized. Base Topic: '%s'", CONFIG_MQTT_BASE_TOPIC);
+    SYS_LOG("MQTT Initialized. Base Topic: '%s'", MQTT_BASE_TOPIC);
 }
 
 void net_mqtt_start(void)
@@ -137,6 +143,11 @@ esp_err_t net_mqtt_publish_raw(const char *full_topic, const char *payload, int 
     }
     
     // Quick green flash to indicate a successful configuration send
-    if (builtin_status_led) sys_led_notify(builtin_status_led, LED_COLOR_RED, 1);
+    if (builtin_status_led) sys_led_notify(builtin_status_led, LED_COLOR_BLUE, 1);
     return ESP_OK;
+}
+
+bool net_mqtt_is_connected(void)
+{
+    return mqtt_connected;
 }

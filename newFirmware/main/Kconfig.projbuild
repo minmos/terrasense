@@ -23,10 +23,4 @@ menu "Terracotta MQTT Configuration"
         help
             The full URI to your MQTT broker (e.g., mqtt://IP_ADDRESS:PORT).
 
-    config MQTT_BASE_TOPIC
-        string "MQTT Base Topic"
-        default "your_mqtt_basetopic"
-        help
-            The root topic for this specific device. All publishes will 
-            be formatted as: [BASE_TOPIC]/[subtopic]
 endmenu

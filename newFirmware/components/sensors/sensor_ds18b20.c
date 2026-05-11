@@ -3,9 +3,11 @@
 #include "onewire_bus.h"
 #include "ds18b20.h"
 #include "sys_utils.h"
+#include "sys_config.h"
 
 #include "sensor_ds18b20.h"
 #include "sensors.h" 
+#include "hass_discovery.h"
 
 // Internal hardware state
 static onewire_bus_handle_t bus = NULL;
@@ -15,7 +17,7 @@ static ds18b20_device_handle_t ds18b20_handles[SENSOR_DS18B20_COMPONENT_MAX_CAPA
 static int active_device_count = 0;
 static int configured_device_count = 0;
 
-void sensor_ds18b20_init(int pin, const ds18b20_target_t *targets, int target_count)
+void sensor_ds18b20_init(int pin, const ds18b20_target_t *targets, int target_count) 
 {
     configured_device_count = target_count;
     SYS_LOG("Initializing DS18B20 Worker. Looking for %d specific sensors...", target_count);
@@ -38,30 +40,26 @@ void sensor_ds18b20_init(int pin, const ds18b20_target_t *targets, int target_co
     
     // Search the bus for devices
     while (onewire_device_iter_get_next(iter, &next_onewire_device) == ESP_OK) {
-        
         bool is_known_sensor = false;
-        
-        // Compare discovered device against our Single Source of Truth
         for (int i = 0; i < target_count; i++) {
             if (next_onewire_device.address == targets[i].rom_address) {
-                
+                is_known_sensor = true; // ← address is known regardless of what follows
+
                 ds18b20_config_t ds_cfg = {};
-                
                 if (ds18b20_new_device_from_enumeration(&next_onewire_device, &ds_cfg, &ds18b20_handles[i]) == ESP_OK) {
                     SYS_LOG("Worker: Bound '%s' to Index %d", targets[i].name, i);
                     active_device_count++;
-                    is_known_sensor = true;
+                } else {
+                    SYS_LOG_ERR("Worker: Found '%s' but failed to create handle!", targets[i].name);
                 }
-                break; // Found a match, stop checking targets
+                break; // correct — no need to check remaining targets
             }
         }
-        
-        // Help the developer out by printing unknown ROMs so they can be copy-pasted
         if (!is_known_sensor) {
-            SYS_LOG("Worker: Found UNKNOWN sensor! Add ROM to config: 0x%016llX", next_onewire_device.address);
+            SYS_LOG_WARN("Worker: Found UNKNOWN sensor! Add ROM to config: 0x%016llX",
+                        next_onewire_device.address);
         }
     }
-    
     ESP_ERROR_CHECK(onewire_del_device_iter(iter));
 }
 

@@ -1,2 +1,3 @@
 dependencies:
-  espressif/mqtt: "*"
+  espressif/mqtt: '*'
+  espressif/cjson: "*"
