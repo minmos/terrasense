@@ -134,13 +134,14 @@ void app_main(void)
     // the main loop is relegated to a slow-ticking system monitor or watchdog.
 
     
+    SYS_LOG("This is an ad hass topic: %s\n", HASS_MQTT_AUTODISCOVERY_TOPIC("sensor", "special-type"));
     sensor_data_t current_env_data;
     while (1) {
         // Safely fetch a copy of the latest background readings
         if (sensors_get_data(&current_env_data)) {
             SYS_LOG("--- ENVIRONMENT UPDATE TESTING OTA UPDATE---");
             
-            for (int i = 0; i < current_env_data.ds18b20_count; i++) {
+            for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
                 float temp = current_env_data.ds18b20_temps[i];
                 
                 if (temp != SENSOR_VALUE_INVALID) {
@@ -151,7 +152,7 @@ void app_main(void)
             }
         }
         
-        vTaskDelay(pdMS_TO_TICKS(30000));
+        vTaskDelay(pdMS_TO_TICKS(20 * SECOND));
     }
 
     // uint32_t uptime_minutes = 0;
@@ -181,60 +182,3 @@ void app_main(void)
 
 
 
-
-
-
-
-
-
-
-//TODO maybe provide small project to discover DS18B20 addresses
-// #include "onewire_bus.h"
-// #include "ds18b20.h"
-
-// #define ONEWIRE_BUS_GPIO 18
-// #define EXAMPLE_ONEWIRE_BUS_GPIO    18
-// #define EXAMPLE_ONEWIRE_MAX_DS18B20 2
-
-    // SYS_LOG("Initializing 1-Wire Bus on GPIO %d...", ONEWIRE_BUS_GPIO);
-    
-    
-    // // install 1-wire bus
-    // onewire_bus_handle_t bus = NULL;
-    // onewire_bus_config_t bus_config = {
-    //     .bus_gpio_num = EXAMPLE_ONEWIRE_BUS_GPIO,
-    //     .flags = {
-    //         .en_pull_up = true, // enable the internal pull-up resistor in case the external device didn't have one
-    //     }
-    // };
-    // onewire_bus_rmt_config_t rmt_config = {
-    //     .max_rx_bytes = 10, // 1byte ROM command + 8byte ROM number + 1byte device command
-    // };
-    // ESP_ERROR_CHECK(onewire_new_bus_rmt(&bus_config, &rmt_config, &bus));
-
-    // int ds18b20_device_num = 0;
-    // ds18b20_device_handle_t ds18b20s[EXAMPLE_ONEWIRE_MAX_DS18B20];
-    // onewire_device_iter_handle_t iter = NULL;
-    // onewire_device_t next_onewire_device;
-    // esp_err_t search_result = ESP_OK;
-
-    // // create 1-wire device iterator, which is used for device search
-    // ESP_ERROR_CHECK(onewire_new_device_iter(bus, &iter));
-    // SYS_LOG("Device iterator created, start searching...");
-    // do {
-    //     search_result = onewire_device_iter_get_next(iter, &next_onewire_device);
-    //     if (search_result == ESP_OK) { // found a new device, let's check if we can upgrade it to a DS18B20
-    //         ds18b20_config_t ds_cfg = {};
-    //         onewire_device_address_t address;
-    //         // check if the device is a DS18B20, if so, return the ds18b20 handle
-    //         if (ds18b20_new_device_from_enumeration(&next_onewire_device, &ds_cfg, &ds18b20s[ds18b20_device_num]) == ESP_OK) {
-    //             ds18b20_get_device_address(ds18b20s[ds18b20_device_num], &address);
-    //             SYS_LOG( "Found a DS18B20[%d], address: %016llX, addr_in_hex: %p", ds18b20_device_num, address, address);
-    //             ds18b20_device_num++;
-    //         } else {
-    //             SYS_LOG( "Found an unknown device, address: %016llX", next_onewire_device.address);
-    //         }
-    //     }
-    // } while (search_result != ESP_ERR_NOT_FOUND);
-    // ESP_ERROR_CHECK(onewire_del_device_iter(iter));
-    // SYS_LOG( "Searching done, %d DS18B20 device(s) found", ds18b20_device_num);

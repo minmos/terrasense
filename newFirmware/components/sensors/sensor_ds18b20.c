@@ -10,7 +10,7 @@
 // Internal hardware state
 static onewire_bus_handle_t bus = NULL;
 // Initialize all handles to NULL (offline)
-static ds18b20_device_handle_t ds18b20_handles[SENSOR_COMPONENT_MAX_CAPACITY] = {NULL}; 
+static ds18b20_device_handle_t ds18b20_handles[SENSOR_DS18B20_COMPONENT_MAX_CAPACITY] = {NULL}; 
 
 static int active_device_count = 0;
 static int configured_device_count = 0;
