@@ -9,6 +9,7 @@ typedef enum {
 typedef struct {
     ha_entity_type_t type;
     const char *device_id;
+    const char *unique_id;
     const char *name;
     const char *device_class;
     const char *state_class;

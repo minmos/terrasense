@@ -128,6 +128,6 @@ direct_dependencies:
 - espressif/mqtt
 - espressif/onewire_bus
 - idf
-manifest_hash: 6a673bbaa3c8fe8d46862a305a4632ac6b9d81e93683b846b54cb5d76c1bd9a9
+manifest_hash: 4988b4b019d71837a4638a58b69412a303a50b76b5c873e339d9e9b62ee53d56
 target: esp32c6
 version: 3.0.0

@@ -16,3 +16,4 @@ dependencies:
   #   public: true
   espressif/ds18b20: ^0.3.1
   espressif/onewire_bus: '*'
+  esp-idf-lib/sht3x: '*'

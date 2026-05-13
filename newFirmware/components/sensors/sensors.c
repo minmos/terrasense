@@ -6,6 +6,9 @@
 
 #include "sensors.h"
 #include "sensor_ds18b20.h"
+#include "sensor_sht3x.h"
+// Required for the underlying I2C library shared by sensors
+#include "i2cdev.h"
 
 // --- Private State ---
 static sensor_data_t current_sensor_data;
@@ -19,27 +22,45 @@ static void sensor_polling_task(void *pvParameter)
 {
     SYS_LOG("Sensor polling task started.");
     
-    // currently only for ds18b20 sensors
 #if HARDWARE_DS18B20_ENABLED
-    float temp_buffer[SENSOR_DS18B20_COMPONENT_MAX_CAPACITY];
+    float ds18b20_temp_buffer[SENSOR_DS18B20_COMPONENT_MAX_CAPACITY];
 #endif
+#if HARDWARE_SHT3X_ENABLED
+    float sht3x_temp_buffer[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY];
+    float sht3x_hum_buffer[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY];
+#endif
+
     while (1) {
 #if HARDWARE_DS18B20_ENABLED
-        sensor_ds18b20_read(temp_buffer);
+        sensor_ds18b20_read(ds18b20_temp_buffer);
+#endif
+#if HARDWARE_SHT3X_ENABLED
+        sensor_sht3x_read(sht3x_temp_buffer, sht3x_hum_buffer);
+#endif
+
         if (xSemaphoreTake(sensor_mutex, portMAX_DELAY) == pdTRUE) {
+#if HARDWARE_DS18B20_ENABLED
             for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
-                current_sensor_data.ds18b20_temps[i] = temp_buffer[i];
+                current_sensor_data.ds18b20_temps[i] = ds18b20_temp_buffer[i];
             }
+#endif
+#if HARDWARE_SHT3X_ENABLED
+            for (int i = 0; i < HARDWARE_SHT3X_COUNT; i++) {
+                current_sensor_data.sht3x_temps[i] = sht3x_temp_buffer[i];
+                current_sensor_data.sht3x_hums[i]  = sht3x_hum_buffer[i];
+            }
+#endif
             xSemaphoreGive(sensor_mutex);
         }
-#endif
-        // delay next sensor values fetching
+        
         vTaskDelay(pdMS_TO_TICKS(SENSOR_FETCHING_INTERVAL));
     }
 }
 
 void sensors_init(void)
 {
+    // Initialize the shared I2C device library first
+    ESP_ERROR_CHECK(i2cdev_init());
 #if HARDWARE_DS18B20_ENABLED
     if (HARDWARE_DS18B20_COUNT > SENSOR_DS18B20_COMPONENT_MAX_CAPACITY) {
         SYS_LOG_ERR("Configured DS18B20 sensors exceed max capacity!");
@@ -49,6 +70,17 @@ void sensors_init(void)
         current_sensor_data.ds18b20_temps[i] = SENSOR_VALUE_INVALID;
     }
     sensor_ds18b20_init(ONEWIRE_BUS_GPIO, HARDWARE_DS18B20_CONFIG, HARDWARE_DS18B20_COUNT);
+#endif
+#if HARDWARE_SHT3X_ENABLED
+    if (HARDWARE_SHT3X_COUNT > SENSOR_SHT3X_COMPONENT_MAX_CAPACITY) {
+        SYS_LOG_ERR("Configured SHT3X sensors exceed max capacity!");
+        configASSERT(0);
+    }
+    for (int i = 0; i < SENSOR_SHT3X_COMPONENT_MAX_CAPACITY; i++) {
+        current_sensor_data.sht3x_temps[i] = SENSOR_VALUE_INVALID;
+        current_sensor_data.sht3x_hums[i]  = SENSOR_VALUE_INVALID;
+    }
+    sensor_sht3x_init(I2C_MASTER_PORT, I2C_SDA_GPIO, I2C_SCL_GPIO, HARDWARE_SHT3X_CONFIG, HARDWARE_SHT3X_COUNT);
 #endif
 
     sensor_mutex = xSemaphoreCreateMutex();

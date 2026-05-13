@@ -14,7 +14,7 @@ Basic pattern:
 - **<attribute>** – e.g., `state`, `command`, `temperature`, `humidity`, `speed`
 
 ## Consistency Rules Overview
-
+TODO need to fix rules for multiple attributes for a single sensor
 | Element | Rule |
 |---------|------|
 | **No spaces** | Use underscores `_` |
