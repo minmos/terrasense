@@ -30,8 +30,8 @@
 //* ***** Sensor Configurations ***** */
 //* ********************************* */
 #define SENSOR_FETCHING_INTERVAL            2 * SECOND
-#define SENSOR_LOG_INTERVAL_MS              5 * SECOND
-#define SENSOR_DATA_PUBLISH_INTERVAL_MS     5 * SECOND
+#define SENSOR_LOG_INTERVAL_MS              45 * SECOND
+#define SENSOR_DATA_PUBLISH_INTERVAL_MS     45 * SECOND
 
 // --- Sensor Pins ---
 #define ONEWIRE_BUS_GPIO 18

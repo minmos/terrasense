@@ -9,6 +9,48 @@
 
 #include "net_mqtt.h"
 
+// --- NEW SHT35 INCLUDES ---
+#include "sht3x.h"
+#include <string.h>
+
+// --- TEMPORARY I2C PINS (Update these for your ESP32-C6) ---
+#define TEST_I2C_PORT       0
+#define TEST_I2C_SDA_GPIO   5 
+#define TEST_I2C_SCL_GPIO   9 
+// Note: SHT3X_I2C_ADDR_GND is usually 0x44. If your ADDR pin is pulled high, use SHT3X_I2C_ADDR_VDD (0x45)
+#define SHT35_I2C_ADDR      SHT3X_I2C_ADDR_GND 
+
+static sht3x_t sht35_dev;
+
+static void test_sht35_sensor(void)
+{
+    SYS_LOG("Initializing I2C and SHT35 (FS304) Sensor...");
+
+    // 1. Initialize the i2cdev library (Required by esp-idf-lib)
+    ESP_ERROR_CHECK(i2cdev_init());
+
+    // 2. Setup the sensor descriptor
+    memset(&sht35_dev, 0, sizeof(sht3x_t));
+    ESP_ERROR_CHECK(sht3x_init_desc(&sht35_dev, SHT35_I2C_ADDR, TEST_I2C_PORT, TEST_I2C_SDA_GPIO, TEST_I2C_SCL_GPIO));
+
+    // 3. Initialize the sensor hardware
+    esp_err_t res = sht3x_init(&sht35_dev);
+    if (res != ESP_OK) {
+        SYS_LOG_ERR("Could not initialize SHT35. Check wiring, pull-up resistors, and I2C address!");
+        return;
+    }
+
+    // 4. Perform a test measurement
+    float temperature = 0.0;
+    float humidity = 0.0;
+    res = sht3x_measure(&sht35_dev, &temperature, &humidity);
+    
+    if (res == ESP_OK) {
+        SYS_LOG("SUCCESS! SHT35 Found -> Temp: %.2f °C, Hum: %.2f %%RH", temperature, humidity);
+    } else {
+        SYS_LOG_ERR("SHT35 Measure failed with code: %d", res);
+    }
+}
 
 // ----------------------------------------------------------------------------
 // Discovery
@@ -139,6 +181,7 @@ static void sensor_log_task(void *pvParameters)
 // ----------------------------------------------------------------------------
 void app_logic_init(sys_debug_led_t *led)
 {
+    test_sht35_sensor();
     run_hass_discovery();
     xTaskCreate(sensor_log_task, "sensor_log_task", 4096, NULL, 4, NULL);
     xTaskCreate(sensor_data_publish_task, "sensor_data_publish_task", 4096, NULL, 4, NULL);
