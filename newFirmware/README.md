@@ -25,8 +25,8 @@ to be able to use `idf.py <something>` commands
 
 ```c
 static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
-    { .name = "Temporärer Temp DS18B20-Sensor",  .rom_address = 0x133C6CF64930E728 },
-    // { .name = "xyz Temp", .rom_address = 0x... }
+    { .name = "Temporärer Temp DS18B20-Sensor", .mqtt_device_id = "ds18b20_temporaryplaceholder", .rom_address = 0x133C6CF64930E728 },
+    // { .name = "xyz Temp", .mqtt_device_id = "ds18b20_temporaryplaceholder", .rom_address = 0x... }
 };
 ```
 

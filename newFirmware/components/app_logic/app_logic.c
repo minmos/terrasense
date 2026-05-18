@@ -78,6 +78,22 @@ static void run_hass_discovery(void)
         hass_discovery_publish(&cfg_hum);
     }
 #endif
+#if HARDWARE_BINARY_ENABLED
+    SYS_LOG("Binary sensors HASS discovery...");
+    for (int i = 0; i < HARDWARE_BINARY_COUNT; i++) {
+        ha_discovery_config_t cfg_binary = {
+            .type                = HA_ENTITY_BINARY_SENSOR, // Assuming HA_ENTITY_BINARY_SENSOR exists in your hass_discovery.h
+            .device_id           = HARDWARE_BINARY_CONFIG[i].mqtt_device_id,
+            .name                = HARDWARE_BINARY_CONFIG[i].name,
+            // .device_class        = HARDWARE_BINARY_CONFIG[i].device_class, // E.g. "door"
+            .device_class        = "None", // currenlty 'None' is generic, if this is needed, just add a member to binary_target_t in sensor.h and adapt HARDWARE_BINARY_CONFIG in sys_config.h
+            .value_template      = "{{ value_json.state }}",
+            .availability_topic  = MQTT_AVAILABILITY_TOPIC,
+            .force_update        = false,
+        };
+        hass_discovery_publish(&cfg_binary);
+    }
+#endif
 }
 
 void app_logic_handle_mqtt(const char *topic, const char *payload)
@@ -142,6 +158,24 @@ static void sensor_data_publish_task(void *pvParameters)
             cJSON_Delete(root);
         }
 #endif
+
+#if HARDWARE_BINARY_ENABLED
+        for (int i = 0; i < HARDWARE_BINARY_COUNT; i++) {
+            cJSON *root = cJSON_CreateObject();
+            
+            // Home Assistant binary sensors usually expect "ON" or "OFF" strings
+            cJSON_AddStringToObject(root, "state", data.binary_states[i] ? "ON" : "OFF");
+            char *payload = cJSON_PrintUnformatted(root);
+
+            char state_topic[128];
+            snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("binary_sensor", "%s"), HARDWARE_BINARY_CONFIG[i].mqtt_device_id);
+
+            net_mqtt_publish_raw(state_topic, payload, 1, 0);
+            
+            free(payload);
+            cJSON_Delete(root);
+        }
+#endif
     }
 }
 
@@ -177,6 +211,12 @@ static void sensor_log_task(void *pvParameters)
             } else {
                 SYS_LOG_ERR("[SHT35] %s: OFFLINE", HARDWARE_SHT3X_CONFIG[i].name);
             }
+        }
+#endif
+
+#if HARDWARE_BINARY_ENABLED
+        for (int i = 0; i < HARDWARE_BINARY_COUNT; i++) {
+            SYS_LOG("[BINARY] %s: %s", HARDWARE_BINARY_CONFIG[i].name, data.binary_states[i] ? "ON (Closed)" : "OFF (Open)");
         }
 #endif
     }

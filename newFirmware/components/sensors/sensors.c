@@ -7,6 +7,7 @@
 #include "sensors.h"
 #include "sensor_ds18b20.h"
 #include "sensor_sht3x.h"
+#include "sensor_binary.h"
 // Required for the underlying I2C library shared by sensors
 #include "i2cdev.h"
 
@@ -29,6 +30,9 @@ static void sensor_polling_task(void *pvParameter)
     float sht3x_temp_buffer[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY];
     float sht3x_hum_buffer[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY];
 #endif
+#if HARDWARE_BINARY_ENABLED
+    bool binary_buffer[SENSOR_BINARY_COMPONENT_MAX_CAPACITY];
+#endif
 
     while (1) {
 #if HARDWARE_DS18B20_ENABLED
@@ -36,6 +40,9 @@ static void sensor_polling_task(void *pvParameter)
 #endif
 #if HARDWARE_SHT3X_ENABLED
         sensor_sht3x_read(sht3x_temp_buffer, sht3x_hum_buffer);
+#endif
+#if HARDWARE_BINARY_ENABLED
+        sensor_binary_read(binary_buffer);
 #endif
 
         if (xSemaphoreTake(sensor_mutex, portMAX_DELAY) == pdTRUE) {
@@ -48,6 +55,11 @@ static void sensor_polling_task(void *pvParameter)
             for (int i = 0; i < HARDWARE_SHT3X_COUNT; i++) {
                 current_sensor_data.sht3x_temps[i] = sht3x_temp_buffer[i];
                 current_sensor_data.sht3x_hums[i]  = sht3x_hum_buffer[i];
+            }
+#endif
+#if HARDWARE_BINARY_ENABLED
+            for (int i = 0; i < HARDWARE_BINARY_COUNT; i++) {
+                current_sensor_data.binary_states[i] = binary_buffer[i];
             }
 #endif
             xSemaphoreGive(sensor_mutex);
@@ -82,7 +94,16 @@ void sensors_init(void)
     }
     sensor_sht3x_init(I2C_MASTER_PORT, I2C_SDA_GPIO, I2C_SCL_GPIO, HARDWARE_SHT3X_CONFIG, HARDWARE_SHT3X_COUNT);
 #endif
-
+#if HARDWARE_BINARY_ENABLED
+    if (HARDWARE_BINARY_COUNT > SENSOR_BINARY_COMPONENT_MAX_CAPACITY) {
+        SYS_LOG_ERR("Configured Binary sensors exceed max capacity!");
+        configASSERT(0);
+    }
+    for (int i = 0; i < SENSOR_BINARY_COMPONENT_MAX_CAPACITY; i++) {
+        current_sensor_data.binary_states[i] = false;
+    }
+    sensor_binary_init();
+#endif
     sensor_mutex = xSemaphoreCreateMutex();
     xTaskCreate(sensor_polling_task, "sensor_task", 4096, NULL, 5, NULL);
 }

@@ -13,6 +13,7 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     switch (config->type) {
         case HA_ENTITY_SENSOR: component_str = "sensor"; break;
         case HA_ENTITY_SWITCH: component_str = "switch"; break;
+        case HA_ENTITY_BINARY_SENSOR: component_str = "binary_sensor"; break;
         default: return false;
     }
 
