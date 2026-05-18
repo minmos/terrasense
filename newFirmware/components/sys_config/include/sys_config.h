@@ -30,16 +30,17 @@
 //* ***** Sensor Configurations ***** */
 //* ********************************* */
 #define SENSOR_FETCHING_INTERVAL            2 * SECOND
-#define SENSOR_LOG_INTERVAL_MS              45 * SECOND
-#define SENSOR_DATA_PUBLISH_INTERVAL_MS     45 * SECOND
+#define SENSOR_LOG_INTERVAL_MS              10 * SECOND
+#define SENSOR_DATA_PUBLISH_INTERVAL_MS     10 * SECOND
 
 // --- Sensor Pins ---
 #define ONEWIRE_BUS_GPIO 18
-#define I2C_MASTER_PORT  0
-#define I2C_SDA_GPIO     5 
-#define I2C_SCL_GPIO     9
-// #define SHT35_I2C_ADDR   SHT3X_I2C_ADDR_GND 
+#define I2C_MASTER_PORT  0 
+#define I2C_SDA_GPIO     4 
+#define I2C_SCL_GPIO     5
 #define SHT35_I2C_ADDR    0x44
+// Standard I2C address for the TCA9548A / PCA9548A breakout board
+#define MUX_I2C_ADDRESS     0x70
 
 //* --- DS18B20 Sensor Configurations ---
 // Set to 1 to enable DS18B20 sensors, 0 to disable entirely
@@ -58,13 +59,11 @@ static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
 
 //* --- SHT3X / FS304 Sensor Configurations ---
 // Set to 1 to enable SHT35 sensors, 0 to disable
-#define HARDWARE_SHT3X_ENABLED 1
+#define HARDWARE_SHT3X_ENABLED 0
 #if HARDWARE_SHT3X_ENABLED
 static const sht3x_target_t HARDWARE_SHT3X_CONFIG[] = {
-    // mux_channel: -1 means it is wired directly to the I2C bus (no multiplexer)
-    // Once you add the TCA9548A, change mux_channel to 0, 1, 2, etc.
-    { .name = "SHT35 testsensor", .mqtt_device_id = "sht35_ambient", .i2c_address = SHT35_I2C_ADDR, .mux_channel = -1 },
-    // { .name = "SHT35 Hot Side", .mqtt_device_id = "sht35_hot", .i2c_address = 0x44, .mux_channel = 0 },
+    { .name = "SHT35 testsensor", .mqtt_device_id = "sht35_ambient_test", .mux_channel = 0 },
+    // { .name = "SHT35 Hot Side", .mqtt_device_id = "sht35_hot", .mux_channel = 1 },
 };
 #define HARDWARE_SHT3X_COUNT (sizeof(HARDWARE_SHT3X_CONFIG) / sizeof(HARDWARE_SHT3X_CONFIG[0]))
 #else

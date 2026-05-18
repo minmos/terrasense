@@ -17,7 +17,6 @@ typedef struct {
 typedef struct {
     const char *name;
     const char *mqtt_device_id;
-    uint8_t i2c_address;  // Usually 0x44 or 0x45
     int8_t mux_channel;   // -1 for direct connection, 0-7 for TCA9548A I2C Multiplexer
 } sht3x_target_t;
 
