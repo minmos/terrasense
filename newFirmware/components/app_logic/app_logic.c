@@ -7,6 +7,24 @@
 #include "freertos/task.h"
 #include "cJSON.h"  
 #include "net_mqtt.h"
+#include <string.h>
+#include "actors.h"
+#include "gpio_switch.h"
+
+// Helper to publish the current physical state of a switch back to Home Assistant
+static void publish_switch_state(int index, bool state)
+{
+#if HARDWARE_SWITCH_ENABLED
+    if (!net_mqtt_is_connected()) {
+            return; 
+    }
+    char state_topic[128];
+    snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("switch", "%s"), HARDWARE_SWITCH_CONFIG[index].mqtt_device_id);
+    SYS_LOG("sending mqtt message with topic: %s with payload: %s", state_topic, state ? "ON" : "OFF");
+    // Home Assistant switches default to expecting raw "ON" or "OFF" strings
+    net_mqtt_publish_raw(state_topic, state ? "ON" : "OFF", 1, 1);
+#endif
+}
 
 // ----------------------------------------------------------------------------
 // Discovery
@@ -85,8 +103,8 @@ static void run_hass_discovery(void)
             .type                = HA_ENTITY_BINARY_SENSOR, // Assuming HA_ENTITY_BINARY_SENSOR exists in your hass_discovery.h
             .device_id           = HARDWARE_BINARY_CONFIG[i].mqtt_device_id,
             .name                = HARDWARE_BINARY_CONFIG[i].name,
-            // .device_class        = HARDWARE_BINARY_CONFIG[i].device_class, // E.g. "door"
-            .device_class        = "None", // currenlty 'None' is generic, if this is needed, just add a member to binary_target_t in sensor.h and adapt HARDWARE_BINARY_CONFIG in sys_config.h
+            // .device_class        = HARDWARE_BINARY_CONFIG[i].device_class, // E.g. "door" // https://www.home-assistant.io/integrations/binary_sensor/
+            .device_class        = "None", // currenlty 'None' is generic, if this is needed, just add a member to binary_sensor_target_t in sensor.h and adapt HARDWARE_BINARY_CONFIG in sys_config.h
             .value_template      = "{{ value_json.state }}",
             .availability_topic  = MQTT_AVAILABILITY_TOPIC,
             .force_update        = false,
@@ -94,11 +112,47 @@ static void run_hass_discovery(void)
         hass_discovery_publish(&cfg_binary);
     }
 #endif
+#if HARDWARE_SWITCH_ENABLED
+    SYS_LOG("Switches HASS discovery...");
+    for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
+        ha_discovery_config_t cfg_switch = {
+            .type                = HA_ENTITY_SWITCH,
+            .device_id           = HARDWARE_SWITCH_CONFIG[i].mqtt_device_id,
+            .name                = HARDWARE_SWITCH_CONFIG[i].name,
+            // Switches don't need device_class or value_template for basic ON/OFF functionality
+            .availability_topic  = MQTT_AVAILABILITY_TOPIC,
+            .force_update        = false,
+        };
+        hass_discovery_publish(&cfg_switch);
+    }
+#endif
 }
 
 void app_logic_handle_mqtt(const char *topic, const char *payload)
 {
     SYS_LOG("app_logic MQTT -> Topic: %s | Payload: %s", topic, payload);
+
+#if HARDWARE_SWITCH_ENABLED
+    // Check if the incoming topic matches any of our configured switches
+    for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
+        char expected_cmd_topic[128];
+        snprintf(expected_cmd_topic, sizeof(expected_cmd_topic), MQTT_COMMAND_TOPIC("switch", "%s"), HARDWARE_SWITCH_CONFIG[i].mqtt_device_id);
+
+        if (strcmp(topic, expected_cmd_topic) == 0) {
+            // Determine requested state
+            bool new_state = (strcmp(payload, "ON") == 0);
+            
+            // Set the physical hardware
+            gpio_switch_set_state(i, new_state);
+            
+            // Immediately confirm the new state to Home Assistant so the UI toggle snaps into place
+            publish_switch_state(i, new_state);
+            
+            SYS_LOG("MQTT Triggered Switch '%s' -> %s", HARDWARE_SWITCH_CONFIG[i].name, new_state ? "ON" : "OFF");
+            return; // Command handled, exit function
+        }
+    }
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -192,7 +246,7 @@ static void sensor_log_task(void *pvParameters)
 
         if (!sensors_get_data(&data)) continue;
 
-        SYS_LOG("--- ENVIRONMENT UPDATE ---");
+        // SYS_LOG("--- ENVIRONMENT UPDATE ---");
 
 #if HARDWARE_DS18B20_ENABLED
         for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
@@ -222,12 +276,55 @@ static void sensor_log_task(void *pvParameters)
     }
 }
 
+
+static void gpio_task(void *pvParameters)
+{
+    SYS_LOG("gpio_task task started. Background toggling active.");
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(SENSOR_LOG_INTERVAL_MS));
+
+#if HARDWARE_SWITCH_ENABLED
+        for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
+            // Read whatever the state currently is (might have been changed by MQTT!)
+            bool current_state = gpio_switch_get_state(i);
+            
+            // Invert it
+            bool new_state = !current_state;
+            
+            // Apply it
+            gpio_switch_set_state(i, new_state);
+            
+            // Notify Home Assistant of the background change
+            publish_switch_state(i, new_state);
+            
+            SYS_LOG("Background Loop toggled '%s': %s", HARDWARE_SWITCH_CONFIG[i].name, new_state ? "ON" : "OFF");
+        }
+#endif
+    }
+}
+
 // ----------------------------------------------------------------------------
 // Init
 // ----------------------------------------------------------------------------
 void app_logic_init(sys_debug_led_t *led)
 {
     run_hass_discovery();
+#if HARDWARE_SWITCH_ENABLED
+    // We must subscribe to the command topics, otherwise the broker won't send us the messages!
+    for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
+        char cmd_subtopic[128];
+        
+        // Build ONLY the subtopic. Do NOT use the MQTT_COMMAND_TOPIC macro here.
+        snprintf(cmd_subtopic, sizeof(cmd_subtopic), "switch/%s/command", HARDWARE_SWITCH_CONFIG[i].mqtt_device_id);
+        
+        SYS_LOG("subscribing to command subtopic: %s", cmd_subtopic);
+        
+        // Let your existing function attach the base topic naturally
+        net_mqtt_subscribe(cmd_subtopic, 1);
+    }
+#endif
+
     xTaskCreate(sensor_log_task, "sensor_log_task", 4096, NULL, 4, NULL);
     xTaskCreate(sensor_data_publish_task, "sensor_data_publish_task", 4096, NULL, 4, NULL);
+    xTaskCreate(gpio_task, "gpio_task", 4096, NULL, 4, NULL);
 }

@@ -26,7 +26,7 @@ typedef struct {
     const char *mqtt_device_id;
     int gpio_pin;
     bool invert_logic;        // If true: GND = ON (Recommended for switches). If false: 3.3V = ON.
-} binary_target_t;
+} binary_sensor_target_t;
 
 // The global thread-safe data structure
 typedef struct {

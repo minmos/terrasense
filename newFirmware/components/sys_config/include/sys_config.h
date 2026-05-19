@@ -1,6 +1,7 @@
 // components/sys_config/include/sys_config.h
 #pragma once
 #include "sensors.h"
+#include "actors.h"
 
 //* ********************************* */
 //* ***** General Configurations **** */
@@ -72,9 +73,9 @@ static const sht3x_target_t HARDWARE_SHT3X_CONFIG[] = {
 
 //* --- Binary Sensor Configurations ---
 // Set to 1 to enable Binary sensors, 0 to disable
-#define HARDWARE_BINARY_ENABLED 1
+#define HARDWARE_BINARY_ENABLED 0
 #if HARDWARE_BINARY_ENABLED
-static const binary_target_t HARDWARE_BINARY_CONFIG[] = {
+static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
     { .name = "Temp binary test sensor", .mqtt_device_id = "testing_binary_sensor", .gpio_pin = BINARY_SENSOR_GPIO, .invert_logic = true },
 };
 #define HARDWARE_BINARY_COUNT (sizeof(HARDWARE_BINARY_CONFIG) / sizeof(HARDWARE_BINARY_CONFIG[0]))
@@ -83,5 +84,21 @@ static const binary_target_t HARDWARE_BINARY_CONFIG[] = {
 #endif
 
 
-// (Future pins will go here)
-// #define RELAY_HEATER_GPIO 5
+//* ********************************* */
+//* ***** Actuator Configurations *** */
+//* ********************************* */
+
+//* --- Control Pins ---
+#define SSR_1_GPIO  7
+
+//* --- GPIO Switch ((solid-state)Relay) Configurations ---
+#define HARDWARE_SWITCH_ENABLED 1
+#if HARDWARE_SWITCH_ENABLED
+static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
+    { .name = "Terrarium Heater", .mqtt_device_id = "switch_heater", .gpio_pin = SSR_1_GPIO, .active_high = true, .default_state = false },
+    // { .name = "Misting Pump", .mqtt_device_id = "switch_pump", .gpio_pin = 6, .active_high = true, .default_state = false },
+};
+#define HARDWARE_SWITCH_COUNT (sizeof(HARDWARE_SWITCH_CONFIG) / sizeof(HARDWARE_SWITCH_CONFIG[0]))
+#else
+#define HARDWARE_SWITCH_COUNT 0
+#endif

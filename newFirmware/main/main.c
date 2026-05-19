@@ -16,6 +16,7 @@
 
 // Application Logic (Future includes)
 #include "sensors.h"  // For I2C (SHT35) etc...
+#include "actors.h"
 #include "app_logic.h"
 // #include "app_relays.h"   // For GPIO (Heater, Pump, Vents)
 // #include "app_control.h"  // The brain: turns on heater if temp is low
@@ -74,6 +75,7 @@ void app_main(void)
     // app_relays_init();    // Configures GPIO pins to output and sets them LOW
     // app_control_init();   // Loads saved target temps from NVS
     sensors_init();
+    actors_init(&builtin_status_led);
 
     // ------------------------------------------------------------------------
     // PHASE 3: Network & Middleware Initialization
