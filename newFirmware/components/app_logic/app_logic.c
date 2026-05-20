@@ -164,7 +164,7 @@ static void sensor_data_publish_task(void *pvParameters)
     sensor_data_t data;
 
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(SENSOR_DATA_PUBLISH_INTERVAL_MS));
+        vTaskDelay(pdMS_TO_TICKS(SENSOR_DATA_PUBLISH_INTERVAL));
 
         if (!net_mqtt_is_connected()) {
             continue;
@@ -242,7 +242,7 @@ static void sensor_log_task(void *pvParameters)
     sensor_data_t data;
 
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(SENSOR_LOG_INTERVAL_MS));
+        vTaskDelay(pdMS_TO_TICKS(SENSOR_LOG_INTERVAL));
 
         if (!sensors_get_data(&data)) continue;
 
@@ -281,7 +281,7 @@ static void gpio_task(void *pvParameters)
 {
     SYS_LOG("gpio_task task started. Background toggling active.");
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(SENSOR_LOG_INTERVAL_MS));
+        vTaskDelay(pdMS_TO_TICKS(SENSOR_LOG_INTERVAL));
 
 #if HARDWARE_SWITCH_ENABLED
         for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
@@ -309,7 +309,7 @@ static void gpio_task(void *pvParameters)
 void app_logic_init(sys_debug_led_t *led)
 {
     run_hass_discovery();
-    
+
 #if HARDWARE_SWITCH_ENABLED
     // We must subscribe to the command topics, otherwise the broker won't send us the messages!
     for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {

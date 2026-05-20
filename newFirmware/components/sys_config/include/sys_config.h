@@ -11,6 +11,8 @@
 #define MINUTE          60 * SECOND
 #define HOUR            60 * MINUTE
 
+#define SYS_LED_DEBUG_MODE_ENABLED 1
+
 
 //* ********************************* */
 //* ****** MQTT Configurations ****** */
@@ -31,8 +33,8 @@
 //* ***** Sensor Configurations ***** */
 //* ********************************* */
 #define SENSOR_FETCHING_INTERVAL            2 * SECOND
-#define SENSOR_LOG_INTERVAL_MS              10 * SECOND
-#define SENSOR_DATA_PUBLISH_INTERVAL_MS     10 * SECOND
+#define SENSOR_LOG_INTERVAL                 10 * SECOND
+#define SENSOR_DATA_PUBLISH_INTERVAL        10 * SECOND
 
 //* --- Sensor Pins ---
 #define ONEWIRE_BUS_GPIO    4
