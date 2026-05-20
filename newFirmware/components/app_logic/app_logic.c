@@ -309,6 +309,7 @@ static void gpio_task(void *pvParameters)
 void app_logic_init(sys_debug_led_t *led)
 {
     run_hass_discovery();
+    
 #if HARDWARE_SWITCH_ENABLED
     // We must subscribe to the command topics, otherwise the broker won't send us the messages!
     for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {

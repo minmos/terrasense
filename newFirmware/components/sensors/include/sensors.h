@@ -1,6 +1,8 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include "sys_utils.h"
+#include "sys_led.h"
 
 #define SENSOR_VALUE_INVALID (-999.0f)
 #define SENSOR_DS18B20_COMPONENT_MAX_CAPACITY 8 // A generous memory cap for the background struct (8 sensors = 32 bytes of RAM)
@@ -37,5 +39,5 @@ typedef struct {
 } sensor_data_t;
 
 // API
-void sensors_init();
+void sensors_init(sys_debug_led_t *debug_led);
 bool sensors_get_data(sensor_data_t *out_data);

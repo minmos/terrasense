@@ -74,7 +74,7 @@ void app_main(void)
     // app_sensors_init();   // Sets up I2C bus and ADC pins
     // app_relays_init();    // Configures GPIO pins to output and sets them LOW
     // app_control_init();   // Loads saved target temps from NVS
-    sensors_init();
+    sensors_init(&builtin_status_led);
     actors_init(&builtin_status_led);
 
     // ------------------------------------------------------------------------

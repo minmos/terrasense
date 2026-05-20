@@ -88,7 +88,7 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 //* ***** Actuator Configurations *** */
 //* ********************************* */
 
-//* --- Control Pins ---
+//* --- SSR Control Pins ---
 #define SSR_1_GPIO  7
 
 //* --- GPIO Switch ((solid-state)Relay) Configurations ---

@@ -7,6 +7,8 @@
 #include "tca9548.h" // Added the MUX library
 #include <string.h>
 
+
+static sys_debug_led_t *status_led = NULL;
 // Internal hardware state
 static sht3x_t sht3x_handles[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY];
 static bool sht3x_active[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY] = {false};
@@ -15,8 +17,9 @@ static i2c_dev_t mux_dev; // The multiplexer device descriptor
 static int configured_sht3x_count = 0;
 static const sht3x_target_t *sht_configs = NULL;
 
-void sensor_sht3x_init(int i2c_port, int sda_pin, int scl_pin, const sht3x_target_t *targets, int target_count)
+void sensor_sht3x_init(int i2c_port, int sda_pin, int scl_pin, const sht3x_target_t *targets, int target_count, sys_debug_led_t *debug_led)
 {
+    status_led = debug_led;
     configured_sht3x_count = target_count;
     sht_configs = targets;
     

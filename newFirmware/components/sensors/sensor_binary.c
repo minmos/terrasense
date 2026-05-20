@@ -3,8 +3,11 @@
 #include "sys_utils.h"
 #include "driver/gpio.h"
 
-void sensor_binary_init(void)
+static sys_debug_led_t *status_led = NULL;
+
+void sensor_binary_init(sys_debug_led_t *debug_led)
 {
+    status_led = debug_led;
 #if HARDWARE_BINARY_ENABLED
     SYS_LOG("Initializing Binary Sensors. Configuring %d sensors...", HARDWARE_BINARY_COUNT);
 

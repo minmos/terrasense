@@ -9,6 +9,8 @@
 #include "sensors.h" 
 #include "hass_discovery.h"
 
+
+static sys_debug_led_t *status_led = NULL;
 // Internal hardware state
 static onewire_bus_handle_t bus = NULL;
 // Initialize all handles to NULL (offline)
@@ -17,8 +19,9 @@ static ds18b20_device_handle_t ds18b20_handles[SENSOR_DS18B20_COMPONENT_MAX_CAPA
 static int active_device_count = 0;
 static int configured_device_count = 0;
 
-void sensor_ds18b20_init(int pin, const ds18b20_target_t *targets, int target_count) 
+void sensor_ds18b20_init(int pin, const ds18b20_target_t *targets, int target_count, sys_debug_led_t *debug_led) 
 {
+    status_led = debug_led;
     configured_device_count = target_count;
     SYS_LOG("Initializing DS18B20 Worker. Looking for %d specific sensors...", target_count);
     
