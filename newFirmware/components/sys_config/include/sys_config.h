@@ -11,7 +11,9 @@
 #define MINUTE          60 * SECOND
 #define HOUR            60 * MINUTE
 
-#define SYS_LED_DEBUG_MODE_ENABLED 1
+//* --- Debug Configs ---
+#define SYS_LED_DEBUG_MODE_ENABLED  1
+
 
 
 //* ********************************* */

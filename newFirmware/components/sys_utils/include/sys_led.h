@@ -10,6 +10,34 @@
 #define GPIO_BUILTIN_LED    8
 #define BUILTIN_LED_COUNT   1
 
+#define SYS_LED_DEBUG_NETWORK_EN    1  // MQTT RX/TX flashes
+#define SYS_LED_DEBUG_SENSOR_EN     1  // I2C/OneWire read flashes (Often noisy, keep 0 unless debugging)
+#define SYS_LED_DEBUG_ACTOR_EN      1
+#define SYS_PED_DEBUG_APP_LOGIC_EN  1
+#if SYS_LED_DEBUG_NETWORK_EN
+    #define LED_NOTIFY_NET(led, blinks)     sys_led_notify(led, LED_COLOR_BLUE, blinks)
+#else
+    #define LED_NOTIFY_NET(led, blinks)     do {} while(0)
+#endif
+// --- Sensor Diagnostics ---
+#if SYS_LED_DEBUG_SENSOR_EN
+    #define LED_NOTIFY_SENSOR(led, blinks)  sys_led_notify(led, LED_COLOR_CYAN, blinks)
+#else
+    #define LED_NOTIFY_SENSOR(led, blinks)  do {} while(0)
+#endif
+// --- Actor Diagnostics ---
+#if SYS_LED_DEBUG_ACTOR_EN
+    #define LED_NOTIFY_ACTOR(led, blinks)   sys_led_notify(led, LED_COLOR_WHITE, blinks)
+#else
+    #define LED_NOTIFY_ACTOR(led, blinks)   do {} while(0)
+#endif
+// --- App logic Diagnostics ---
+#if SYS_PED_DEBUG_APP_LOGIC_EN
+    #define LED_NOTIFY_APP_LOGIC(led, blinks)   sys_led_notify(led, LED_COLOR_WHITE, blinks)
+#else
+    #define LED_NOTIFY_APP_LOGIC(led, blinks)   do {} while(0)
+#endif
+
 // ============================================================================
 // SYSTEM LED ARCHITECTURE & USAGE RULES
 // ============================================================================
@@ -71,7 +99,7 @@ typedef struct {
     uint16_t num_leds;
     volatile sys_led_state_t current_state; 
     TaskHandle_t task_handle;
-
+    
     volatile uint8_t override_blinks_left;
     volatile bool override_trigger; 
     sys_led_color_t override_color; 
@@ -106,3 +134,6 @@ esp_err_t sys_led_notify(sys_debug_led_t *led_obj, sys_led_color_t color, uint8_
  * with the background state machine.
  */
 esp_err_t sys_led_set_color(sys_debug_led_t *led_obj, sys_led_color_t color, uint8_t brightness_pct);
+
+
+

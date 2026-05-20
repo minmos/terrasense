@@ -1,7 +1,6 @@
 // components/sys_utils/sys_led.c
 #include "sys_led.h"
 #include "sys_utils.h" 
-#include "sys_config.h" 
 
 static const char *TAG __attribute__((unused)) = "SYS_LED";
 
@@ -140,14 +139,8 @@ esp_err_t sys_led_set_state(sys_debug_led_t *led_obj, sys_led_state_t state)
 esp_err_t sys_led_notify(sys_debug_led_t *led_obj, sys_led_color_t color, uint8_t n_blinks)
 {
     if (led_obj == NULL) return ESP_ERR_INVALID_ARG;
-
-    // --- BOOT PROTECTION ---
-    // Do not allow transient diagnostic flashes during the boot phase.
-    // If a fatal error occurs during boot, the system must call 
-    // sys_led_set_state(led, SYS_LED_STATE_ERROR) instead of using a notification.
-    if (led_obj->current_state == SYS_LED_STATE_BOOTING) {
-        return ESP_ERR_INVALID_STATE; 
-    }
+    if (led_obj->current_state == SYS_LED_STATE_BOOTING) return ESP_ERR_INVALID_STATE;
+    if (n_blinks > 3) n_blinks = 3; // prevent blocking background base states
 
 #if SYS_LED_DEBUG_MODE_ENABLED
     led_obj->override_color = color;
