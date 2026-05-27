@@ -37,6 +37,7 @@
 #define SENSOR_FETCHING_INTERVAL            2 * SECOND
 #define SENSOR_LOG_INTERVAL                 10 * SECOND
 #define SENSOR_DATA_PUBLISH_INTERVAL        10 * SECOND
+#define CONTROL_LOOP_INTERVAL               SECOND
 
 //* --- Sensor Pins ---
 #define ONEWIRE_BUS_GPIO    4
@@ -49,12 +50,15 @@
 
 //* --- DS18B20 Sensor Configurations ---
 // Set to 1 to enable DS18B20 sensors, 0 to disable entirely
-#define HARDWARE_DS18B20_ENABLED 0
+#define HARDWARE_DS18B20_ENABLED 1
 #if HARDWARE_DS18B20_ENABLED
 //! ADHERE TO NAMING SCHEME FROM mqtt_namingscheme.md
 static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
-    { .name = "Temporärer Temp DS18B20-Sensor", .mqtt_device_id = "ds18b20_temporaryplaceholder", .rom_address = 0x133C6CF64930E728 },
-    // { .name = "xyz Temp", .mqtt_device_id = "ds18b20_temporaryplaceholder", .rom_address = 0x... }
+    { .name = "Right Platform", .mqtt_device_id = "right_platform", .rom_address = 0x133C6CF64930E728 },
+    // { .name = "test_heat_platform", .mqtt_device_id = "ds18b20_heat_platform", .rom_address = 0x133C6CF64930E728 },
+    // { .name = "test_heat_platform", .mqtt_device_id = "ds18b20_heat_platform", .rom_address = 0x133C6CF64930E728 },
+    // { .name = "test_heat_platform", .mqtt_device_id = "ds18b20_heat_platform", .rom_address = 0x133C6CF64930E728 },
+    // { .name = "test_heat_platform", .mqtt_device_id = "ds18b20_heat_platform", .rom_address = 0x133C6CF64930E728 },
 };
 // The compiler counts how many DS18B20 sensors we have, need to know the size for creating correct sensor_data_t struct
 #define HARDWARE_DS18B20_COUNT (sizeof(HARDWARE_DS18B20_CONFIG) / sizeof(HARDWARE_DS18B20_CONFIG[0]))
@@ -62,12 +66,14 @@ static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
 #define HARDWARE_DS18B20_COUNT 0
 #endif
 
+#define HEATER_DS18B20_NAME "right_platform"
+
 //* --- SHT3X / FS304 Sensor Configurations ---
 // Set to 1 to enable SHT35 sensors, 0 to disable
-#define HARDWARE_SHT3X_ENABLED 0
+#define HARDWARE_SHT3X_ENABLED 1
 #if HARDWARE_SHT3X_ENABLED
 static const sht3x_target_t HARDWARE_SHT3X_CONFIG[] = {
-    { .name = "SHT35 testsensor", .mqtt_device_id = "sht35_ambient_test", .mux_channel = 0 },
+    { .name = "Center", .mqtt_device_id = "center", .mux_channel = 0 },
     // { .name = "SHT35 Hot Side", .mqtt_device_id = "sht35_hot", .mux_channel = 1 },
 };
 #define HARDWARE_SHT3X_COUNT (sizeof(HARDWARE_SHT3X_CONFIG) / sizeof(HARDWARE_SHT3X_CONFIG[0]))
@@ -77,10 +83,10 @@ static const sht3x_target_t HARDWARE_SHT3X_CONFIG[] = {
 
 //* --- Binary Sensor Configurations ---
 // Set to 1 to enable Binary sensors, 0 to disable
-#define HARDWARE_BINARY_ENABLED 0
+#define HARDWARE_BINARY_ENABLED 1
 #if HARDWARE_BINARY_ENABLED
 static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
-    { .name = "Temp binary test sensor", .mqtt_device_id = "testing_binary_sensor", .gpio_pin = BINARY_SENSOR_GPIO, .invert_logic = true },
+    { .name = "Tank Empty", .mqtt_device_id = "liquid_level_sensor", .gpio_pin = BINARY_SENSOR_GPIO, .invert_logic = true },
 };
 #define HARDWARE_BINARY_COUNT (sizeof(HARDWARE_BINARY_CONFIG) / sizeof(HARDWARE_BINARY_CONFIG[0]))
 #else
@@ -93,16 +99,19 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 //* ********************************* */
 
 //* --- SSR Control Pins ---
-#define RELAY_0_GPIO    10 
-#define SSR_RELAY_GPIO  7 
+
+#define RELAY_0_GPIO  10
+#define RELAY_1_GPIO  1
+#define RELAY_2_GPIO  0
+#define SSR_RELAY_GPIO  7
 
 //* --- GPIO Switch ((solid-state)Relay) Configurations ---
 #define HARDWARE_SWITCH_ENABLED 0
 #if HARDWARE_SWITCH_ENABLED
 static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
-    { .name = "Temp relay switch", .mqtt_device_id = "switch_normalrelay", .gpio_pin = RELAY_0_GPIO, .active_high = true, .default_state = false },
-    { .name = "Temp SSR relay switch", .mqtt_device_id = "switch_SSRrelay", .gpio_pin = SSR_RELAY_GPIO, .active_high = true, .default_state = false },
-    // { .name = "Misting Pump", .mqtt_device_id = "switch_pump", .gpio_pin = 6, .active_high = true, .default_state = false },
+    { .name = "Lights", .mqtt_device_id = "lights", .gpio_pin = RELAY_0_GPIO, .active_high = true, .default_state = false },
+    { .name = "Misting System", .mqtt_device_id = "misting_system", .gpio_pin = RELAY_1_GPIO, .active_high = true, .default_state = false },
+    { .name = "Ceramic Heater", .mqtt_device_id = "ceramic_heater", .gpio_pin = SSR_RELAY_GPIO, .active_high = true, .default_state = false },
 };
 #define HARDWARE_SWITCH_COUNT (sizeof(HARDWARE_SWITCH_CONFIG) / sizeof(HARDWARE_SWITCH_CONFIG[0]))
 #else
