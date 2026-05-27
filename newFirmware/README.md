@@ -1,5 +1,6 @@
 # Terrasense Project
 
+## anything debug LED related could be found in `components/sys_utils/include/sys_led.h`
 ## Important commands
 To activate idf env for shell depending where your idf lies on your machine:
 ```bash
@@ -43,5 +44,5 @@ static const sht3x_target_t HARDWARE_SHT3X_CONFIG[] = {
 
 ## ESP32-C6 Infos
 
-[ESP32-C6 pinout information](https://www.studiopieters.nl/esp32-c6-pinout/ "esp32-c6-pinout")
-![Pinout diagram](pinout.png)
+[ESP32-C6 pinout information](https://docs.waveshare.com/ESP32-C6-DEV-KIT-N8/ "esp32-c6-pinout")
+![Pinout diagram](pinout.webp)

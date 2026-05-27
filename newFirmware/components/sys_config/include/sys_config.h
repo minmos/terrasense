@@ -96,7 +96,7 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 #define SSR_1_GPIO  7
 
 //* --- GPIO Switch ((solid-state)Relay) Configurations ---
-#define HARDWARE_SWITCH_ENABLED 1
+#define HARDWARE_SWITCH_ENABLED 0
 #if HARDWARE_SWITCH_ENABLED
 static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
     { .name = "Terrarium Heater", .mqtt_device_id = "switch_heater", .gpio_pin = SSR_1_GPIO, .active_high = true, .default_state = false },

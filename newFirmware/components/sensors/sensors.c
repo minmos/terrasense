@@ -15,6 +15,7 @@
 static sensor_data_t current_sensor_data;
 static SemaphoreHandle_t sensor_mutex = NULL;
 
+static sys_debug_led_t *status_led = NULL;
 /**
  * This is a background task fetching all the sensor values that are available and storing them in current_data. 
  * current_data is protected by sensor_mutex. 
@@ -71,6 +72,7 @@ static void sensor_polling_task(void *pvParameter)
 
 void sensors_init(sys_debug_led_t *debug_led)
 {
+    status_led = debug_led;
     // Initialize the shared I2C device library first
     ESP_ERROR_CHECK(i2cdev_init());
 #if HARDWARE_DS18B20_ENABLED
