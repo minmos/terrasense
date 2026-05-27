@@ -3,16 +3,12 @@
   "idf.openOcdConfigs": [
     "board/esp32c6-builtin.cfg"
   ],
-  "idf.port": "/dev/tty.usbmodem5B610954801",
-  "idf.currentSetup": "/Users/theoschweighofer/.espressif/v6.0/esp-idf",
-  "idf.customExtraVars": {
-    "IDF_TARGET": "esp32c6"
-  },
-  "clangd.path": "/Users/theoschweighofer/.espressif/tools/esp-clang/esp-20.1.1_20250829/esp-clang/bin/clangd",
+  "idf.port": "/dev/ttyACM1",
+  "idf.currentSetup": "/opt/esp/idf",
+  "clangd.path": "/opt/esp/tools/esp-clangd/esp-21.1.3_20260408/esp-clangd/bin/clangd",
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=/Users/theoschweighofer/Documents/10.Semester/embedded/first_tryout/terracotta/build"
-  ],
-  "idf.flashType": "UART"
+    "--compile-commands-dir=/workspaces/TerraSense/newFirmware/build"
+  ]
 }
