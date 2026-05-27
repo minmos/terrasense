@@ -78,8 +78,8 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     // --- Device Grouping ---
     cJSON *device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", TERRARIUM_ID);
-    cJSON_AddStringToObject(device, "name", "TerraSense Controller");
-    cJSON_AddStringToObject(device, "manufacturer", "Theo's Custom Hardware");
+    cJSON_AddStringToObject(device, "name", TERRARIUM_ID);
+    cJSON_AddStringToObject(device, "manufacturer", "DROPOUT IOT Alliance");
     cJSON_AddStringToObject(device, "model", "ESP32-C6");
     cJSON_AddItemToObject(root, "device", device);
 

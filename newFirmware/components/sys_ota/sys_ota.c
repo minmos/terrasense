@@ -5,6 +5,8 @@
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 
+#include "esp_crt_bundle.h"
+
 #include "sys_ota.h"
 #include "sys_utils.h"
 
@@ -24,8 +26,7 @@ static void ota_background_task(void *pvParameter)
 
     esp_http_client_config_t http_config = {
         .url = args->url,
-        // Force the client to use plain HTTP over TCP, ignoring any SSL attempts
-        .transport_type = HTTP_TRANSPORT_OVER_TCP,
+        .crt_bundle_attach = esp_crt_bundle_attach,
     };
 
     esp_https_ota_config_t ota_config = {
