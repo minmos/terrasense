@@ -10,6 +10,8 @@
 #include "esp_sntp.h"
 #include "lwip/netdb.h" // For DNS resolution (Watchdog)
 
+#include "esp_netif.h"
+
 #include "net_core.h"
 #include "sys_utils.h"
 #include "sys_led.h"
@@ -76,6 +78,23 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         SYS_LOG("Successfully connected! IP Address: " IPSTR, IP2STR(&event->ip_info.ip));
+
+        // Print DNS Server information
+        esp_netif_dns_info_t dns_info;
+        if (esp_netif_get_dns_info(event->esp_netif, ESP_NETIF_DNS_MAIN, &dns_info) == ESP_OK) {
+            char dns_str[40];
+            ipaddr_ntoa_r((const ip_addr_t *)&dns_info.ip, dns_str, sizeof(dns_str));
+            SYS_LOG("DNS Server (Main): %s", dns_str);
+        } else {
+            SYS_LOG_WARN("No Main DNS Server configured");
+        }
+
+        if (esp_netif_get_dns_info(event->esp_netif, ESP_NETIF_DNS_BACKUP, &dns_info) == ESP_OK) {
+            char dns_str[40];
+            ipaddr_ntoa_r((const ip_addr_t *)&dns_info.ip, dns_str, sizeof(dns_str));
+            SYS_LOG("DNS Server (Backup): %s", dns_str);
+        }
+
         if (builtin_status_led) sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_DAY);
         // --- START BACKGROUND SERVICES ONCE WE HAVE AN IP ---
 
