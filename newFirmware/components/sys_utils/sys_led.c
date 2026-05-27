@@ -114,6 +114,7 @@ esp_err_t sys_led_init(sys_debug_led_t *led_obj)
     return err;
 }
 
+//! for the currnet board R and G seem to be flipped due to WS2812 thingi
 esp_err_t sys_led_set_color(sys_debug_led_t *led_obj, sys_led_color_t color, uint8_t brightness_pct)
 {
     if (led_obj == NULL || led_obj->handle == NULL) return ESP_ERR_INVALID_STATE;

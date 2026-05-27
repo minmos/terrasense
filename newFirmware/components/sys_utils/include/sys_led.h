@@ -7,6 +7,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+// ============================================================================
+// HARDWARE CONFIGURATION
+// ============================================================================
+// Select the physical color order of your LED hardware by defining ONE of these:
+#define SYS_LED_COLOR_ORDER_GRB 1
+
 #define GPIO_BUILTIN_LED    8
 #define BUILTIN_LED_COUNT   1
 
@@ -72,15 +78,22 @@ typedef struct {
     uint8_t b;
 } sys_led_color_t;
 
-#define LED_COLOR_YELLOW (sys_led_color_t){255, 180, 0}
-#define LED_COLOR_ORANGE (sys_led_color_t){255, 80,  0}
-#define LED_COLOR_GREEN  (sys_led_color_t){0, 255, 0}
-#define LED_COLOR_CYAN   (sys_led_color_t){0, 255, 255}
-#define LED_COLOR_BLUE   (sys_led_color_t){0, 0, 255}
-#define LED_COLOR_RED    (sys_led_color_t){255, 0, 0}
-#define LED_COLOR_PURPLE (sys_led_color_t){255, 0, 255}
-#define LED_COLOR_WHITE  (sys_led_color_t){255, 255, 255}
-#define LED_COLOR_BLACK  (sys_led_color_t){0, 0, 0}
+#if(SYS_LED_COLOR_ORDER_GRB)
+    #define MAKE_COLOR(red, green, blue) (sys_led_color_t){ .r = (green), .g = (red), .b = (blue) }
+#else
+    #define MAKE_COLOR(red, green, blue) (sys_led_color_t){ .r = (red), .g = (green), .b = (blue) }
+#endif
+
+// --- Color Definitions (Always write as standard R, G, B) ---
+#define LED_COLOR_YELLOW MAKE_COLOR(255, 180, 0)
+#define LED_COLOR_ORANGE MAKE_COLOR(255, 80,  0)
+#define LED_COLOR_GREEN  MAKE_COLOR(0,   255, 0)
+#define LED_COLOR_CYAN   MAKE_COLOR(0,   255, 255)
+#define LED_COLOR_BLUE   MAKE_COLOR(0,   0,   255)
+#define LED_COLOR_RED    MAKE_COLOR(255, 0,   0)
+#define LED_COLOR_PURPLE MAKE_COLOR(255, 0,   255)
+#define LED_COLOR_WHITE  MAKE_COLOR(255, 255, 255)
+#define LED_COLOR_BLACK  MAKE_COLOR(0,   0,   0)
 
 
 // --- Base System States ---
