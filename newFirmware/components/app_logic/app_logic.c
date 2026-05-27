@@ -11,6 +11,7 @@
 #include "actors.h"
 #include "gpio_switch.h"
 #include "actor_fan.h"
+#include <stdlib.h>
 
 // Helper to publish the current physical state of a switch back to Home Assistant
 static void publish_switch_state(int index, bool state)
@@ -49,6 +50,25 @@ static void publish_fan_state(int index)
 #endif
 }
 
+#if HARDWARE_NUMBER_ENABLED
+static float current_number_states[HARDWARE_NUMBER_COUNT] = {0};
+#endif
+
+// 2. Publish Helper
+static void publish_number_state(int index, float value)
+{
+#if HARDWARE_NUMBER_ENABLED
+    if (!net_mqtt_is_connected()) return; 
+
+    char state_topic[128];
+    snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("number", "%s"), HARDWARE_NUMBER_CONFIG[index].mqtt_device_id);
+    
+    char payload[32];
+    snprintf(payload, sizeof(payload), "%.2f", value); // Format as float with 2 decimals
+    
+    net_mqtt_publish_raw(state_topic, payload, 1, 1);
+#endif
+}
 
 // ----------------------------------------------------------------------------
 // Discovery
@@ -185,9 +205,28 @@ static void run_hass_discovery(void)
                 .value_template      = "{{ value_json.rpm }}",
                 .availability_topic  = MQTT_AVAILABILITY_TOPIC,
                 .force_update        = false,
+                .icon                = "mdi:fan-clock",
             };
             hass_discovery_publish(&cfg_rpm);
         }
+    }
+#endif
+
+#if HARDWARE_NUMBER_ENABLED
+    SYS_LOG("Numbers HASS discovery...");
+    for (int i = 0; i < HARDWARE_NUMBER_COUNT; i++) {
+        ha_discovery_config_t cfg_num = {
+            .type                = HA_ENTITY_NUMBER,
+            .device_id           = HARDWARE_NUMBER_CONFIG[i].mqtt_device_id,
+            .name                = HARDWARE_NUMBER_CONFIG[i].name,
+            .availability_topic  = MQTT_AVAILABILITY_TOPIC,
+            .min_value           = HARDWARE_NUMBER_CONFIG[i].min_val,
+            .max_value           = HARDWARE_NUMBER_CONFIG[i].max_val,
+            .step                = HARDWARE_NUMBER_CONFIG[i].step,
+            .mode                = "slider", // Use "box" if you prefer text input
+            .force_update        = false,
+        };
+        hass_discovery_publish(&cfg_num);
     }
 #endif
 }
@@ -246,6 +285,26 @@ void app_logic_handle_mqtt(const char *topic, const char *payload)
             publish_fan_state(i);
             SYS_LOG("MQTT Triggered Fan '%s' Percentage -> %d%%", HARDWARE_FAN_CONFIG[i].name, percent);
             return;
+        }
+    }
+#endif
+
+#if HARDWARE_NUMBER_ENABLED
+    for (int i = 0; i < HARDWARE_NUMBER_COUNT; i++) {
+        char expected_cmd_topic[128];
+        snprintf(expected_cmd_topic, sizeof(expected_cmd_topic), MQTT_COMMAND_TOPIC("number", "%s"), HARDWARE_NUMBER_CONFIG[i].mqtt_device_id);
+
+        if (strcmp(topic, expected_cmd_topic) == 0) {
+            float new_val = atof(payload);
+            
+            // Save to memory
+            current_number_states[i] = new_val;
+            
+            // Confirm the state back to Home Assistant
+            publish_number_state(i, new_val);
+            
+            SYS_LOG("MQTT Triggered Number '%s' -> %.2f", HARDWARE_NUMBER_CONFIG[i].name, new_val);
+            return; 
         }
     }
 #endif
@@ -465,6 +524,17 @@ void app_logic_init(sys_debug_led_t *led)
         SYS_LOG("Subscribing to fan subtopics: %s, %s", cmd_subtopic, pct_subtopic);
         net_mqtt_subscribe(cmd_subtopic, 1);
         net_mqtt_subscribe(pct_subtopic, 1);
+    }
+#endif
+#if HARDWARE_NUMBER_ENABLED
+    for (int i = 0; i < HARDWARE_NUMBER_COUNT; i++) {
+        // Load default value into memory and publish it at boot
+        current_number_states[i] = HARDWARE_NUMBER_CONFIG[i].default_val;
+        publish_number_state(i, current_number_states[i]);
+
+        char cmd_subtopic[128];
+        snprintf(cmd_subtopic, sizeof(cmd_subtopic), "number/%s/command", HARDWARE_NUMBER_CONFIG[i].mqtt_device_id);
+        net_mqtt_subscribe(cmd_subtopic, 1);
     }
 #endif
 

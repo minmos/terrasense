@@ -120,10 +120,37 @@ static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
 #define HARDWARE_FAN_ENABLED 1
 #if HARDWARE_FAN_ENABLED
 static const fan_target_t HARDWARE_FAN_CONFIG[] = {
-    // { .name = "vier pin Fan", .mqtt_device_id = "fan_vier", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN0_TACH_PIN, .pwm_pin = FAN0_PWN_PIN, .is_4pin = true },
-    { .name = "neuer drei pin Fan", .mqtt_device_id = "fan_dreinewnewnew", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN_UNUSED_PIN, .pwm_pin = FAN_UNUSED_PIN, .is_4pin = false },
+    { .name = "neuer vier pin Fan", .mqtt_device_id = "fan_vier_neu", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN0_TACH_PIN, .pwm_pin = FAN0_PWN_PIN, .is_4pin = true },
+    // { .name = "neuer drei pin Fan", .mqtt_device_id = "fan_dreinewnewnew", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN_UNUSED_PIN, .pwm_pin = FAN_UNUSED_PIN, .is_4pin = false },
 };
 #define HARDWARE_FAN_COUNT (sizeof(HARDWARE_FAN_CONFIG) / sizeof(HARDWARE_FAN_CONFIG[0]))
 #else
 #define HARDWARE_FAN_COUNT 0
+#endif
+
+//* --- Number Configurations ---
+typedef struct {
+    const char *name;
+    const char *mqtt_device_id;
+    float min_val;
+    float max_val;
+    float step;
+    float default_val;
+} number_target_t;
+
+#define HARDWARE_NUMBER_ENABLED 1
+#if HARDWARE_NUMBER_ENABLED
+static const number_target_t HARDWARE_NUMBER_CONFIG[] = {
+    { 
+        .name = "Target Temperature", 
+        .mqtt_device_id = "number_target_temp", 
+        .min_val = 15.0, 
+        .max_val = 40.0, 
+        .step = 0.5, 
+        .default_val = 28.0 
+    }
+};
+#define HARDWARE_NUMBER_COUNT (sizeof(HARDWARE_NUMBER_CONFIG) / sizeof(HARDWARE_NUMBER_CONFIG[0]))
+#else
+#define HARDWARE_NUMBER_COUNT 0
 #endif

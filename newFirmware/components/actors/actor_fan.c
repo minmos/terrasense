@@ -108,6 +108,8 @@ void actor_fan_init(sys_debug_led_t *debug_led)
                 HARDWARE_FAN_CONFIG[i].name, 
                 active_pwm_pin,
                 HARDWARE_FAN_CONFIG[i].tach_pin);
+                
+        actor_fan_set_speed(i, 0);
     }
 #endif
 }

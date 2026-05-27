@@ -14,7 +14,8 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
         case HA_ENTITY_SENSOR: component_str = "sensor"; break;
         case HA_ENTITY_SWITCH: component_str = "switch"; break;
         case HA_ENTITY_BINARY_SENSOR: component_str = "binary_sensor"; break;
-        case HA_ENTITY_FAN: component_str = "fan"; break; // <-- ADDED
+        case HA_ENTITY_FAN: component_str = "fan"; break; 
+        case HA_ENTITY_NUMBER: component_str = "number"; break;
         default: return false;
     }
 
@@ -29,7 +30,7 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("%s", "%s"), component_str, config->device_id);
     
     // Both Switches and Fans use basic ON/OFF command topics
-    if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN) {
+    if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN || config->type == HA_ENTITY_NUMBER) {
         snprintf(command_topic, sizeof(command_topic), MQTT_COMMAND_TOPIC("%s", "%s"), component_str, config->device_id);
     }
 
@@ -49,7 +50,7 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     if (config->availability_topic) cJSON_AddStringToObject(root, "availability_topic", config->availability_topic);
     if (config->force_update) cJSON_AddTrueToObject(root, "force_update");
 
-    if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN) {
+    if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN || config->type == HA_ENTITY_NUMBER) {
         cJSON_AddStringToObject(root, "command_topic", command_topic);
     }
 
@@ -62,6 +63,16 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
         
         cJSON_AddStringToObject(root, "percentage_command_topic", pct_cmd);
         cJSON_AddStringToObject(root, "percentage_state_topic", pct_state);
+    }
+    if (config->type == HA_ENTITY_NUMBER) {
+        cJSON_AddNumberToObject(root, "min", config->min_value);
+        cJSON_AddNumberToObject(root, "max", config->max_value);
+        if (config->step > 0) {
+            cJSON_AddNumberToObject(root, "step", config->step);
+        }
+        if (config->mode != NULL) {
+            cJSON_AddStringToObject(root, "mode", config->mode);
+        }
     }
 
     // --- Device Grouping ---
