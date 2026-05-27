@@ -492,6 +492,60 @@ static void fan_data_publish_task(void *pvParameters)
 #endif
 
 
+static void control_task(void *pvParameters)
+{
+    SYS_LOG("control_task started. Background automation active.");
+    sensor_data_t sensor_data;
+    const float target_temp = 25.0f; // Fixed target temperature for now
+
+    // Cache the hardware indices once at startup
+    int heater_ds18b20 = -1;
+    for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
+        if (strcmp(HARDWARE_DS18B20_CONFIG[i].name, HEATER_DS18B20_NAME) == 0) {
+            heater_ds18b20 = i;
+            break;
+        }
+    }
+
+    int heater_switch_idx = gpio_switch_get_index_by_id("ceramic_heater");
+
+    if (heater_ds18b20 == -1) {
+        SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", HEATER_DS18B20_NAME);
+    }
+
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(CONTROL_LOOP_INTERVAL));
+        if (!sensors_get_data(&sensor_data)) continue;
+
+        float current_heater_temp = sensor_data.ds18b20_temps[heater_ds18b20];
+        if (current_heater_temp != SENSOR_VALUE_INVALID) {
+            //if temperature > target turn off, else turn on
+            bool heater_should_be_on = (current_heater_temp < target_temp);
+
+            bool current_heater_state = gpio_switch_get_state(heater_switch_idx);
+            if (current_heater_state != heater_should_be_on) {
+                gpio_switch_set_state(heater_switch_idx, heater_should_be_on);
+                publish_switch_state(heater_switch_idx, heater_should_be_on);
+                SYS_LOG("Automation: Heater SSR3 turned %s (Temp: %.2fC, Target: %.2fC)", 
+                        heater_should_be_on ? "ON" : "OFF", current_heater_temp, target_temp);
+            }
+        }
+    }
+
+        //if time == 19:00 (possibly target time set able by home assistant?) 
+        //turn off the light (SSR1) and 
+        //turn on the sprayer for 3 minutes (also settable by home assistant)
+
+        //if time == 6:00 (possibly target time set able by home assistant?) 
+        //turn on the light (SSR1) and 
+        //turn on the fans at 100% for 2 hours (also settable by home assistant) (fans will be implemented later on)
+
+        //check if water level sensor has triggered and publish to home assistant if yes
+    
+}
+
+
 // ----------------------------------------------------------------------------
 // Init
 // ----------------------------------------------------------------------------
@@ -540,7 +594,7 @@ void app_logic_init(sys_debug_led_t *led)
 
     xTaskCreate(sensor_log_task, "sensor_log_task", 4096, NULL, 4, NULL);
     xTaskCreate(sensor_data_publish_task, "sensor_data_publish_task", 4096, NULL, 4, NULL);
-    // xTaskCreate(gpio_task, "gpio_task", 4096, NULL, 4, NULL);
+    xTaskCreate(control_task, "control_task", 4096, NULL, 4, NULL);
 #if HARDWARE_FAN_ENABLED
     xTaskCreate(fan_data_publish_task, "fan_data_publish_task", 4096, NULL, 4, NULL);
 #endif
