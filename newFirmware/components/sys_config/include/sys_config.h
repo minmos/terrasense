@@ -93,13 +93,15 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 //* ********************************* */
 
 //* --- SSR Control Pins ---
-#define SSR_1_GPIO  7
+#define RELAY_0_GPIO    10 
+#define SSR_RELAY_GPIO  7 
 
 //* --- GPIO Switch ((solid-state)Relay) Configurations ---
-#define HARDWARE_SWITCH_ENABLED 0
+#define HARDWARE_SWITCH_ENABLED 1
 #if HARDWARE_SWITCH_ENABLED
 static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
-    { .name = "Terrarium Heater", .mqtt_device_id = "switch_heater", .gpio_pin = SSR_1_GPIO, .active_high = true, .default_state = false },
+    { .name = "Temp relay switch", .mqtt_device_id = "switch_normalrelay", .gpio_pin = RELAY_0_GPIO, .active_high = true, .default_state = false },
+    { .name = "Temp SSR relay switch", .mqtt_device_id = "switch_SSRrelay", .gpio_pin = SSR_RELAY_GPIO, .active_high = true, .default_state = false },
     // { .name = "Misting Pump", .mqtt_device_id = "switch_pump", .gpio_pin = 6, .active_high = true, .default_state = false },
 };
 #define HARDWARE_SWITCH_COUNT (sizeof(HARDWARE_SWITCH_CONFIG) / sizeof(HARDWARE_SWITCH_CONFIG[0]))

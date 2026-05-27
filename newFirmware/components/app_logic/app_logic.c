@@ -310,7 +310,7 @@ void app_logic_init(sys_debug_led_t *led)
 {
     run_hass_discovery();
 
-#if HARDWARE_SWITCH_ENABLED
+#if HARDWARE_SWITCH_ENABLED //*maybe at startup publish default state again to HA
     // We must subscribe to the command topics, otherwise the broker won't send us the messages!
     for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
         char cmd_subtopic[128];
@@ -327,5 +327,5 @@ void app_logic_init(sys_debug_led_t *led)
 
     xTaskCreate(sensor_log_task, "sensor_log_task", 4096, NULL, 4, NULL);
     xTaskCreate(sensor_data_publish_task, "sensor_data_publish_task", 4096, NULL, 4, NULL);
-    xTaskCreate(gpio_task, "gpio_task", 4096, NULL, 4, NULL);
+    // xTaskCreate(gpio_task, "gpio_task", 4096, NULL, 4, NULL);
 }
