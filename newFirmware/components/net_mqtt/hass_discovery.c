@@ -14,11 +14,10 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
         case HA_ENTITY_SENSOR: component_str = "sensor"; break;
         case HA_ENTITY_SWITCH: component_str = "switch"; break;
         case HA_ENTITY_BINARY_SENSOR: component_str = "binary_sensor"; break;
+        case HA_ENTITY_FAN: component_str = "fan"; break; // <-- ADDED
         default: return false;
     }
 
-    // --- NEW LOGIC HERE ---
-    // If unique_id is provided, use it for discovery. Otherwise, fallback to device_id.
     const char *discovery_id = config->unique_id ? config->unique_id : config->device_id;
 
     // 2. Generate the dynamic topics 
@@ -26,13 +25,11 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     char state_topic[256];
     char command_topic[256];
     
-    // Discovery topic uses the highly specific ID so MQTT retained messages don't overwrite each other
     snprintf(discovery_topic, sizeof(discovery_topic), MQTT_HASS_AUTODISCOVERY_TOPIC("%s", "%s"), component_str, discovery_id);
-    
-    // State topic uses the base device_id so both entities listen to the exact same MQTT topic!
     snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("%s", "%s"), component_str, config->device_id);
     
-    if (config->type == HA_ENTITY_SWITCH) {
+    // Both Switches and Fans use basic ON/OFF command topics
+    if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN) {
         snprintf(command_topic, sizeof(command_topic), MQTT_COMMAND_TOPIC("%s", "%s"), component_str, config->device_id);
     }
 
@@ -40,8 +37,6 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     cJSON *root = cJSON_CreateObject();
     
     cJSON_AddStringToObject(root, "name", config->name);
-    
-    // unique_id in the JSON also uses our specific ID
     cJSON_AddStringToObject(root, "unique_id", discovery_id); 
     cJSON_AddStringToObject(root, "state_topic", state_topic);
 
@@ -54,13 +49,22 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     if (config->availability_topic) cJSON_AddStringToObject(root, "availability_topic", config->availability_topic);
     if (config->force_update) cJSON_AddTrueToObject(root, "force_update");
 
-    if (config->type == HA_ENTITY_SWITCH) {
+    if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN) {
         cJSON_AddStringToObject(root, "command_topic", command_topic);
     }
 
+    // --- FAN SPECIFIC CAPABILITIES ---
+    if (config->type == HA_ENTITY_FAN) {
+        char pct_cmd[256];
+        char pct_state[256];
+        snprintf(pct_cmd, sizeof(pct_cmd), MQTT_BASE_TOPIC "/fan/%s/percentage_command", config->device_id);
+        snprintf(pct_state, sizeof(pct_state), MQTT_BASE_TOPIC "/fan/%s/percentage_state", config->device_id);
+        
+        cJSON_AddStringToObject(root, "percentage_command_topic", pct_cmd);
+        cJSON_AddStringToObject(root, "percentage_state_topic", pct_state);
+    }
+
     // --- Device Grouping ---
-    // (Because you hardcoded TERRARIUM_ID here, all sensors including the DS18B20 
-    // and SHT35 will be beautifully grouped under one "TerraSense Controller" device in HA!)
     cJSON *device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", TERRARIUM_ID);
     cJSON_AddStringToObject(device, "name", "TerraSense Controller");

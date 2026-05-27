@@ -4,7 +4,8 @@
 typedef enum {
     HA_ENTITY_SENSOR,
     HA_ENTITY_SWITCH,
-    HA_ENTITY_BINARY_SENSOR
+    HA_ENTITY_BINARY_SENSOR,
+    HA_ENTITY_FAN
 } ha_entity_type_t;
 
 typedef struct {

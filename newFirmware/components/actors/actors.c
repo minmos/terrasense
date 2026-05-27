@@ -3,6 +3,8 @@
 #include "gpio_switch.h"
 #include "sys_config.h"
 #include "sys_utils.h"
+#include "actor_fan.h"
+
 
 void actors_init(sys_debug_led_t *debug_led)
 {
@@ -12,6 +14,7 @@ void actors_init(sys_debug_led_t *debug_led)
     gpio_switch_init(debug_led);
 
     // 2. Future actors will go here!
+    actor_fan_init(debug_led);
     // pwm_dimmer_init(debug_led);
     // stepper_motor_init(debug_led);
     

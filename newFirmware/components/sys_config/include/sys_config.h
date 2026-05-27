@@ -97,7 +97,7 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 #define SSR_RELAY_GPIO  7 
 
 //* --- GPIO Switch ((solid-state)Relay) Configurations ---
-#define HARDWARE_SWITCH_ENABLED 1
+#define HARDWARE_SWITCH_ENABLED 0
 #if HARDWARE_SWITCH_ENABLED
 static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
     { .name = "Temp relay switch", .mqtt_device_id = "switch_normalrelay", .gpio_pin = RELAY_0_GPIO, .active_high = true, .default_state = false },
@@ -107,4 +107,23 @@ static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
 #define HARDWARE_SWITCH_COUNT (sizeof(HARDWARE_SWITCH_CONFIG) / sizeof(HARDWARE_SWITCH_CONFIG[0]))
 #else
 #define HARDWARE_SWITCH_COUNT 0
+#endif
+
+
+//* --- Fan Configurations ---
+#define RPM_UPDATE_INTERVAL 2 * SECOND
+#define FAN_UNUSED_PIN      -1
+#define FAN0_POWER_PIN      18
+#define FAN0_TACH_PIN       19
+#define FAN0_PWN_PIN        20
+
+#define HARDWARE_FAN_ENABLED 1
+#if HARDWARE_FAN_ENABLED
+static const fan_target_t HARDWARE_FAN_CONFIG[] = {
+    // { .name = "vier pin Fan", .mqtt_device_id = "fan_vier", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN0_TACH_PIN, .pwm_pin = FAN0_PWN_PIN, .is_4pin = true },
+    { .name = "neuer drei pin Fan", .mqtt_device_id = "fan_dreinewnewnew", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN_UNUSED_PIN, .pwm_pin = FAN_UNUSED_PIN, .is_4pin = false },
+};
+#define HARDWARE_FAN_COUNT (sizeof(HARDWARE_FAN_CONFIG) / sizeof(HARDWARE_FAN_CONFIG[0]))
+#else
+#define HARDWARE_FAN_COUNT 0
 #endif
