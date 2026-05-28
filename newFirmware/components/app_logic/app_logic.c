@@ -149,7 +149,7 @@ static void run_hass_discovery(void)
             .device_id           = HARDWARE_BINARY_CONFIG[i].mqtt_device_id,
             .name                = HARDWARE_BINARY_CONFIG[i].name,
             // .device_class        = HARDWARE_BINARY_CONFIG[i].device_class, // E.g. "door" // https://www.home-assistant.io/integrations/binary_sensor/
-            .device_class        = "None", // currenlty 'None' is generic, if this is needed, just add a member to binary_sensor_target_t in sensor.h and adapt HARDWARE_BINARY_CONFIG in sys_config.h
+            .device_class        = "moisture", // currenlty 'None' is generic, if this is needed, just add a member to binary_sensor_target_t in sensor.h and adapt HARDWARE_BINARY_CONFIG in sys_config.h
             .value_template      = "{{ value_json.state }}",
             .availability_topic  = MQTT_AVAILABILITY_TOPIC,
             .force_update        = false,
@@ -496,7 +496,7 @@ static void control_task(void *pvParameters)
 {
     SYS_LOG("control_task started. Background automation active.");
     sensor_data_t sensor_data;
-    const float target_temp = 25.0f; // Fixed target temperature for now
+    const float target_temp = 30.0f; // Fixed target temperature for now
 
     // Cache the hardware indices once at startup
     int heater_ds18b20 = -1;
@@ -527,7 +527,7 @@ static void control_task(void *pvParameters)
             if (current_heater_state != heater_should_be_on) {
                 gpio_switch_set_state(heater_switch_idx, heater_should_be_on);
                 publish_switch_state(heater_switch_idx, heater_should_be_on);
-                SYS_LOG("Automation: Heater SSR3 turned %s (Temp: %.2fC, Target: %.2fC)", 
+                SYS_LOG("Automation: Heater turned %s (Temp: %.2fC, Target: %.2fC)", 
                         heater_should_be_on ? "ON" : "OFF", current_heater_temp, target_temp);
             }
         }

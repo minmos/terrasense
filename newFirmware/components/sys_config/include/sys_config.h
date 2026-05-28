@@ -66,7 +66,7 @@ static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
 #define HARDWARE_DS18B20_COUNT 0
 #endif
 
-#define HEATER_DS18B20_NAME "right_platform"
+#define HEATER_DS18B20_NAME "Right Platform"
 
 //* --- SHT3X / FS304 Sensor Configurations ---
 // Set to 1 to enable SHT35 sensors, 0 to disable
@@ -106,11 +106,12 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 #define SSR_RELAY_GPIO  7
 
 //* --- GPIO Switch ((solid-state)Relay) Configurations ---
-#define HARDWARE_SWITCH_ENABLED 0
+#define HARDWARE_SWITCH_ENABLED 1
 #if HARDWARE_SWITCH_ENABLED
 static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
     { .name = "Lights", .mqtt_device_id = "lights", .gpio_pin = RELAY_0_GPIO, .active_high = true, .default_state = false },
     { .name = "Misting System", .mqtt_device_id = "misting_system", .gpio_pin = RELAY_1_GPIO, .active_high = true, .default_state = false },
+    { .name = "TEST_RELAY2", .mqtt_device_id = "test_relay2", .gpio_pin = RELAY_2_GPIO, .active_high = true, .default_state = false },
     { .name = "Ceramic Heater", .mqtt_device_id = "ceramic_heater", .gpio_pin = SSR_RELAY_GPIO, .active_high = true, .default_state = false },
 };
 #define HARDWARE_SWITCH_COUNT (sizeof(HARDWARE_SWITCH_CONFIG) / sizeof(HARDWARE_SWITCH_CONFIG[0]))

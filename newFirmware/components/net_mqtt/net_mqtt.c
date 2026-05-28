@@ -17,6 +17,10 @@ static sys_debug_led_t *builtin_status_led = NULL;
 static mqtt_message_cb_t app_msg_cb = NULL;
 static bool mqtt_connected = false;
 
+#define MAX_MQTT_SUBSCRIPTIONS 16
+static char registered_subtopics[MAX_MQTT_SUBSCRIPTIONS][128];
+static int registered_subtopics_count = 0;
+
 // Helper to format the full topic: "BASE_TOPIC/subtopic"
 static void get_full_topic(const char *subtopic, char *out_buffer, size_t max_len)
 {
@@ -33,6 +37,19 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             mqtt_connected = true; 
             SYS_LOG("Connected to MQTT Broker!");
             esp_mqtt_client_publish(mqtt_client, MQTT_AVAILABILITY_TOPIC, "online", 0, 1, 1);
+            
+            // Re-subscribe to all registered subtopics
+            for (int i = 0; i < registered_subtopics_count; i++) {
+                char full_topic[128];
+                get_full_topic(registered_subtopics[i], full_topic, sizeof(full_topic));
+                int msg_id = esp_mqtt_client_subscribe(mqtt_client, full_topic, 1);
+                if (msg_id != -1) {
+                    SYS_LOG("Subscribed to: %s", full_topic);
+                } else {
+                    SYS_LOG_ERR("Failed to subscribe to: %s", full_topic);
+                }
+            }
+
             // Restore normal LED state if we recovered from an error
             if (builtin_status_led) sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_DAY);
             break;
@@ -116,17 +133,41 @@ esp_err_t net_mqtt_publish(const char *subtopic, const char *payload, int qos, i
 
 esp_err_t net_mqtt_subscribe(const char *subtopic, int qos)
 {
-    if (mqtt_client == NULL) return ESP_FAIL;
+    if (subtopic == NULL) return ESP_FAIL;
 
-    char full_topic[128];
-    get_full_topic(subtopic, full_topic, sizeof(full_topic));
-
-    int msg_id = esp_mqtt_client_subscribe(mqtt_client, full_topic, qos);
-    if (msg_id == -1) {
-        SYS_LOG_ERR("Failed to subscribe to topic: %s", full_topic);
-        return ESP_FAIL;
+    // Check if already registered
+    bool found = false;
+    for (int i = 0; i < registered_subtopics_count; i++) {
+        if (strcmp(registered_subtopics[i], subtopic) == 0) {
+            found = true;
+            break;
+        }
     }
-    SYS_LOG("Subscribed to: %s", full_topic);
+
+    // Add to registry if not already present
+    if (!found) {
+        if (registered_subtopics_count < MAX_MQTT_SUBSCRIPTIONS) {
+            strncpy(registered_subtopics[registered_subtopics_count], subtopic, sizeof(registered_subtopics[0]) - 1);
+            registered_subtopics[registered_subtopics_count][sizeof(registered_subtopics[0]) - 1] = '\0';
+            registered_subtopics_count++;
+        } else {
+            SYS_LOG_ERR("MQTT Subscription registry is full! Cannot subscribe to: %s", subtopic);
+            return ESP_FAIL;
+        }
+    }
+
+    // If already connected, perform the subscription immediately
+    if (mqtt_connected && mqtt_client != NULL) {
+        char full_topic[128];
+        get_full_topic(subtopic, full_topic, sizeof(full_topic));
+        int msg_id = esp_mqtt_client_subscribe(mqtt_client, full_topic, qos);
+        if (msg_id == -1) {
+            SYS_LOG_ERR("Failed to subscribe to topic: %s", full_topic);
+            return ESP_FAIL;
+        }
+        SYS_LOG("Subscribed to: %s", full_topic);
+    }
+
     return ESP_OK;
 }
 
