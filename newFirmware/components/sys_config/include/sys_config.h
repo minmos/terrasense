@@ -48,6 +48,7 @@
 #define MUX_I2C_ADDRESS     0x70
 #define BINARY_SENSOR_GPIO  11
 
+
 //* --- DS18B20 Sensor Configurations ---
 // Set to 1 to enable DS18B20 sensors, 0 to disable entirely
 #define HARDWARE_DS18B20_ENABLED 1
@@ -111,7 +112,7 @@ static const binary_sensor_target_t HARDWARE_BINARY_CONFIG[] = {
 static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
     { .name = "Lights", .mqtt_device_id = "lights", .gpio_pin = RELAY_0_GPIO, .active_high = true, .default_state = false },
     { .name = "Misting System", .mqtt_device_id = "misting_system", .gpio_pin = RELAY_1_GPIO, .active_high = true, .default_state = false },
-    { .name = "TEST_RELAY2", .mqtt_device_id = "test_relay2", .gpio_pin = RELAY_2_GPIO, .active_high = true, .default_state = false },
+    // { .name = "TEST_RELAY2", .mqtt_device_id = "test_relay2", .gpio_pin = RELAY_2_GPIO, .active_high = true, .default_state = false },
     { .name = "Ceramic Heater", .mqtt_device_id = "ceramic_heater", .gpio_pin = SSR_RELAY_GPIO, .active_high = true, .default_state = false },
 };
 #define HARDWARE_SWITCH_COUNT (sizeof(HARDWARE_SWITCH_CONFIG) / sizeof(HARDWARE_SWITCH_CONFIG[0]))
@@ -130,7 +131,7 @@ static const switch_target_t HARDWARE_SWITCH_CONFIG[] = {
 #define HARDWARE_FAN_ENABLED 1
 #if HARDWARE_FAN_ENABLED
 static const fan_target_t HARDWARE_FAN_CONFIG[] = {
-    { .name = "neuer vier pin Fan", .mqtt_device_id = "fan_vier_neu", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN0_TACH_PIN, .pwm_pin = FAN0_PWN_PIN, .is_4pin = true },
+    { .name = "Fan", .mqtt_device_id = "fan", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN0_TACH_PIN, .pwm_pin = FAN0_PWN_PIN, .is_4pin = true },
     // { .name = "neuer drei pin Fan", .mqtt_device_id = "fan_dreinewnewnew", .power_pin = FAN0_POWER_PIN, .tach_pin = FAN_UNUSED_PIN, .pwm_pin = FAN_UNUSED_PIN, .is_4pin = false },
 };
 #define HARDWARE_FAN_COUNT (sizeof(HARDWARE_FAN_CONFIG) / sizeof(HARDWARE_FAN_CONFIG[0]))
@@ -146,19 +147,57 @@ typedef struct {
     float max_val;
     float step;
     float default_val;
+    const char *mode;
 } number_target_t;
 
 #define HARDWARE_NUMBER_ENABLED 1
 #if HARDWARE_NUMBER_ENABLED
 static const number_target_t HARDWARE_NUMBER_CONFIG[] = {
     { 
-        .name = "Target Temperature", 
-        .mqtt_device_id = "number_target_temp", 
-        .min_val = 15.0, 
-        .max_val = 40.0, 
+        .name = "Target Temperature Day", 
+        .mqtt_device_id = "target_temp_day", 
+        .min_val = 20.0, 
+        .max_val = 32.0, 
         .step = 0.5, 
-        .default_val = 28.0 
-    }
+        .default_val = 28.0, 
+        .mode = "slider"
+    },
+    { 
+        .name = "Target Temperature Night", 
+        .mqtt_device_id = "target_temp_night", 
+        .min_val = 20.0, 
+        .max_val = 32.0, 
+        .step = 0.5, 
+        .default_val = 22.0, 
+        .mode = "slider"
+    },
+    { 
+        .name = "Sunset Mist Time Seconds", 
+        .mqtt_device_id = "sunset_mist_time_seconds", 
+        .min_val = 10.0, 
+        .max_val = 300.0, 
+        .step = 5, 
+        .default_val = 60.0, 
+        .mode = "box"
+    },
+    { 
+        .name = "Sunrise Fan Time Minutes", 
+        .mqtt_device_id = "sunrise_fan_time_minutes", 
+        .min_val = 10.0, 
+        .max_val = 300.0, 
+        .step = 5, 
+        .default_val = 120.0, 
+        .mode = "box"
+    },
+    { 
+        .name = "Sunrise Fan Speed", 
+        .mqtt_device_id = "sunrise_fan_speed", 
+        .min_val = 0.0, 
+        .max_val = 100.0, 
+        .step = 5, 
+        .default_val = 60.0, 
+        .mode = "box"
+    },
 };
 #define HARDWARE_NUMBER_COUNT (sizeof(HARDWARE_NUMBER_CONFIG) / sizeof(HARDWARE_NUMBER_CONFIG[0]))
 #else

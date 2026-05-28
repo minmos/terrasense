@@ -12,6 +12,74 @@
 #include "gpio_switch.h"
 #include "actor_fan.h"
 #include <stdlib.h>
+#include "nvs.h"
+#include <time.h>
+
+
+
+static bool last_is_day = false;
+
+// --- Sunrise/Sunset Settings ---
+static uint8_t sunrise_hour = 6;
+static uint8_t sunrise_minute = 0;
+static uint8_t sunset_hour = 18;
+static uint8_t sunset_minute = 0;
+
+static void load_sun_times_from_nvs(void)
+{
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open("sun_times", NVS_READONLY, &my_handle);
+    if (err == ESP_OK) {
+        nvs_get_u8(my_handle, "sunrise_h", &sunrise_hour);
+        nvs_get_u8(my_handle, "sunrise_m", &sunrise_minute);
+        nvs_get_u8(my_handle, "sunset_h", &sunset_hour);
+        nvs_get_u8(my_handle, "sunset_m", &sunset_minute);
+        nvs_close(my_handle);
+        SYS_LOG("Loaded sun times from NVS: Sunrise %02d:%02d, Sunset %02d:%02d", 
+                sunrise_hour, sunrise_minute, sunset_hour, sunset_minute);
+    } else {
+        SYS_LOG("No sun times found in NVS, using default: Sunrise %02d:%02d, Sunset %02d:%02d", 
+                sunrise_hour, sunrise_minute, sunset_hour, sunset_minute);
+    }
+}
+
+static void save_sun_times_to_nvs(void)
+{
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open("sun_times", NVS_READWRITE, &my_handle);
+    if (err == ESP_OK) {
+        nvs_set_u8(my_handle, "sunrise_h", sunrise_hour);
+        nvs_set_u8(my_handle, "sunrise_m", sunrise_minute);
+        nvs_set_u8(my_handle, "sunset_h", sunset_hour);
+        nvs_set_u8(my_handle, "sunset_m", sunset_minute);
+        nvs_commit(my_handle);
+        nvs_close(my_handle);
+        SYS_LOG("Saved sun times to NVS: Sunrise %02d:%02d, Sunset %02d:%02d", 
+                sunrise_hour, sunrise_minute, sunset_hour, sunset_minute);
+    } else {
+        SYS_LOG_ERR("Failed to open NVS to save sun times");
+    }
+}
+
+static bool check_is_day(){
+     //get day/night timings
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+
+    int current_minutes = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+    int sunrise_minutes = sunrise_hour * 60 + sunrise_minute;
+    int sunset_minutes = sunset_hour * 60 + sunset_minute;
+
+    if (sunrise_minutes < sunset_minutes) {
+        return (current_minutes >= sunrise_minutes && current_minutes < sunset_minutes);
+    } else {
+        // Sunset is earlier in the day than sunrise (e.g. nocturnal custom settings or over-midnight window)
+        return (current_minutes >= sunrise_minutes || current_minutes < sunset_minutes);
+    }
+}
+
 
 // Helper to publish the current physical state of a switch back to Home Assistant
 static void publish_switch_state(int index, bool state)
@@ -68,6 +136,18 @@ static void publish_number_state(int index, float value)
     
     net_mqtt_publish_raw(state_topic, payload, 1, 1);
 #endif
+}
+
+static float get_number_value_by_id(const char *mqtt_device_id, float fallback)
+{
+#if HARDWARE_NUMBER_ENABLED
+    for (int i = 0; i < HARDWARE_NUMBER_COUNT; i++) {
+        if (strcmp(HARDWARE_NUMBER_CONFIG[i].mqtt_device_id, mqtt_device_id) == 0) {
+            return current_number_states[i];
+        }
+    }
+#endif
+    return fallback;
 }
 
 // ----------------------------------------------------------------------------
@@ -223,7 +303,7 @@ static void run_hass_discovery(void)
             .min_value           = HARDWARE_NUMBER_CONFIG[i].min_val,
             .max_value           = HARDWARE_NUMBER_CONFIG[i].max_val,
             .step                = HARDWARE_NUMBER_CONFIG[i].step,
-            .mode                = "slider", // Use "box" if you prefer text input
+            .mode                = HARDWARE_NUMBER_CONFIG[i].mode, // Use "box" if you prefer text input
             .force_update        = false,
         };
         hass_discovery_publish(&cfg_num);
@@ -234,6 +314,47 @@ static void run_hass_discovery(void)
 void app_logic_handle_mqtt(const char *topic, const char *payload)
 {
     SYS_LOG("app_logic MQTT -> Topic: %s | Payload: %s", topic, payload);
+
+    // Check for sunrise/sunset commands
+    char expected_sunrise_topic[128];
+    char expected_sunset_topic[128];
+    snprintf(expected_sunrise_topic, sizeof(expected_sunrise_topic), "%s/%s", MQTT_BASE_TOPIC, "cmd/sunrise");
+    snprintf(expected_sunset_topic, sizeof(expected_sunset_topic), "%s/%s", MQTT_BASE_TOPIC, "cmd/sunset");
+
+    if (strcmp(topic, expected_sunrise_topic) == 0) {
+        int h = 0, m = 0;
+        if (sscanf(payload, "%d:%d", &h, &m) == 2) {
+            if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+                sunrise_hour = h;
+                sunrise_minute = m;
+                save_sun_times_to_nvs();
+                SYS_LOG("Updated sunrise time: %02d:%02d", sunrise_hour, sunrise_minute);
+            } else {
+                SYS_LOG_ERR("Invalid sunrise payload values: %s", payload);
+            }
+        } else {
+            SYS_LOG_ERR("Invalid sunrise payload format: %s", payload);
+        }
+        return;
+    }
+
+    if (strcmp(topic, expected_sunset_topic) == 0) {
+        int h = 0, m = 0;
+        if (sscanf(payload, "%d:%d", &h, &m) == 2) {
+            if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+                sunset_hour = h;
+                sunset_minute = m;
+                save_sun_times_to_nvs();
+                SYS_LOG("Updated sunset time: %02d:%02d", sunset_hour, sunset_minute);
+            } else {
+                SYS_LOG_ERR("Invalid sunset payload values: %s", payload);
+            }
+        } else {
+            SYS_LOG_ERR("Invalid sunset payload format: %s", payload);
+        }
+        return;
+    }
+
 
 #if HARDWARE_SWITCH_ENABLED
     // Check if the incoming topic matches any of our configured switches
@@ -496,7 +617,6 @@ static void control_task(void *pvParameters)
 {
     SYS_LOG("control_task started. Background automation active.");
     sensor_data_t sensor_data;
-    const float target_temp = 30.0f; // Fixed target temperature for now
 
     // Cache the hardware indices once at startup
     int heater_ds18b20 = -1;
@@ -506,44 +626,106 @@ static void control_task(void *pvParameters)
             break;
         }
     }
-
+    
     int heater_switch_idx = gpio_switch_get_index_by_id("ceramic_heater");
+    int lights_switch_idx = gpio_switch_get_index_by_id("lights");
+    int mister_switch_idx = gpio_switch_get_index_by_id("misting_system");
+
+    static time_t fan_off_time = 0;
+    static time_t mister_off_time = 0;
 
     if (heater_ds18b20 == -1) {
         SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", HEATER_DS18B20_NAME);
     }
-
+    
+    last_is_day = check_is_day();
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(CONTROL_LOOP_INTERVAL));
-        if (!sensors_get_data(&sensor_data)) continue;
+        
+        time_t now;
+        struct tm timeinfo;
+        time(&now);
+        localtime_r(&now, &timeinfo);
 
-        float current_heater_temp = sensor_data.ds18b20_temps[heater_ds18b20];
-        if (current_heater_temp != SENSOR_VALUE_INVALID) {
-            //if temperature > target turn off, else turn on
-            bool heater_should_be_on = (current_heater_temp < target_temp);
-
-            bool current_heater_state = gpio_switch_get_state(heater_switch_idx);
-            if (current_heater_state != heater_should_be_on) {
-                gpio_switch_set_state(heater_switch_idx, heater_should_be_on);
-                publish_switch_state(heater_switch_idx, heater_should_be_on);
-                SYS_LOG("Automation: Heater turned %s (Temp: %.2fC, Target: %.2fC)", 
-                        heater_should_be_on ? "ON" : "OFF", current_heater_temp, target_temp);
+        
+        bool is_day = check_is_day();
+        
+       
+        // --- 1. TEMPERATURE AUTOMATION (Heater) ---
+        if (sensors_get_data(&sensor_data)) {
+            float current_heater_temp = sensor_data.ds18b20_temps[heater_ds18b20];
+            if (current_heater_temp != SENSOR_VALUE_INVALID) {
+                float current_target_temp = get_number_value_by_id(is_day ? "target_temp_day" : "target_temp_night", 25.0f);
+                bool heater_should_be_on = (current_heater_temp < current_target_temp);
+                bool current_heater_state = gpio_switch_get_state(heater_switch_idx);
+                if (current_heater_state != heater_should_be_on) {
+                    gpio_switch_set_state(heater_switch_idx, heater_should_be_on);
+                    publish_switch_state(heater_switch_idx, heater_should_be_on);
+                    SYS_LOG("Automation: Heater turned %s (Temp: %.2fC, Target: %.2fC)", 
+                            heater_should_be_on ? "ON" : "OFF", current_heater_temp, current_target_temp);
+                }
             }
         }
+        // SYS_LOG("ITS %s", is_day ? "DAY" : "NIGHT");
+        
+
+        //turn on/off the light
+        bool current_light_state = gpio_switch_get_state(lights_switch_idx);
+        if (current_light_state != is_day) {
+            gpio_switch_set_state(lights_switch_idx, is_day);
+            publish_switch_state(lights_switch_idx, is_day);
+            SYS_LOG("Automation: Day/Night transition. Lights turned %s (Current: %02d:%02d, Sunrise: %02d:%02d, Sunset: %02d:%02d)",
+                    is_day ? "ON" : "OFF", timeinfo.tm_hour, timeinfo.tm_min, sunrise_hour, sunrise_minute, sunset_hour, sunset_minute);
+        }
+
+        //sunrise
+        if (is_day == true && last_is_day == false){
+            SYS_LOG("Automation: It's sunrise at: %02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+#if HARDWARE_FAN_ENABLED
+            float fan_time_minutes = get_number_value_by_id("sunrise_fan_time_minutes", 120.0f);
+            float fan_speed_pct = get_number_value_by_id("sunrise_fan_speed", 60.0f);
+            fan_off_time = now + (time_t)(fan_time_minutes * 60.0f);
+            actor_fan_set_speed(0, (uint8_t)fan_speed_pct);
+            publish_fan_state(0);
+            SYS_LOG("Automation: Sunrise triggered. Fan set to %.0f%% for %.0f minutes.", fan_speed_pct, fan_time_minutes);
+#endif
+        }
+
+        //sunset
+        if (is_day == false && last_is_day == true){
+            SYS_LOG("Automation: It's sunset at: %02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+            if (mister_switch_idx != -1) {
+                float mist_time_seconds = get_number_value_by_id("sunset_mist_time_seconds", 120.0f);
+                mister_off_time = now + (time_t)mist_time_seconds;
+                gpio_switch_set_state(mister_switch_idx, true);
+                publish_switch_state(mister_switch_idx, true);
+                SYS_LOG("Automation: Sunset triggered. Misting system started for %.0f seconds.", mist_time_seconds);
+            }
+        }
+
+#if HARDWARE_FAN_ENABLED
+        if (fan_off_time != 0 && now >= fan_off_time) {
+            actor_fan_set_speed(0, 0);
+            publish_fan_state(0);
+            fan_off_time = 0;
+            SYS_LOG("Automation: Fan turned OFF after sunrise run duration");
+        }
+#endif
+
+        if (mister_off_time != 0 && now >= mister_off_time) {
+            if (mister_switch_idx != -1) {
+                gpio_switch_set_state(mister_switch_idx, false);
+                publish_switch_state(mister_switch_idx, false);
+            }
+            mister_off_time = 0;
+            SYS_LOG("Automation: Mister turned OFF after sunset spray duration");
+        }
+
+        last_is_day = is_day;
     }
+} 
 
-        //if time == 19:00 (possibly target time set able by home assistant?) 
-        //turn off the light (SSR1) and 
-        //turn on the sprayer for 3 minutes (also settable by home assistant)
-
-        //if time == 6:00 (possibly target time set able by home assistant?) 
-        //turn on the light (SSR1) and 
-        //turn on the fans at 100% for 2 hours (also settable by home assistant) (fans will be implemented later on)
-
-        //check if water level sensor has triggered and publish to home assistant if yes
-    
-}
 
 
 // ----------------------------------------------------------------------------
@@ -551,7 +733,10 @@ static void control_task(void *pvParameters)
 // ----------------------------------------------------------------------------
 void app_logic_init(sys_debug_led_t *led)
 {
+    load_sun_times_from_nvs();
     run_hass_discovery();
+    net_mqtt_subscribe("cmd/sunrise", 1);
+    net_mqtt_subscribe("cmd/sunset", 1);
 
 #if HARDWARE_SWITCH_ENABLED //*maybe at startup publish default state again to HA
     // We must subscribe to the command topics, otherwise the broker won't send us the messages!
