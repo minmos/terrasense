@@ -4,55 +4,42 @@
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
-// System & Core Components
 #include "sys_config.h"
 #include "sys_utils.h"
 #include "sys_led.h" 
 #include "sys_ota.h" 
 
-// Network Components
 #include "net_core.h"
 #include "net_mqtt.h" 
 
-// Application Logic (Future includes)
 #include "sensors.h"  
 #include "actors.h"
 #include "app_logic.h"
 
-// Global Handles
 sys_debug_led_t builtin_status_led;
 
-
-// ============================================================================
-// 1. MQTT ROUTING DISPATCHER
-// ============================================================================
+/**
+ * We can only have one global mqtt callback function. Chose to reside in main. Main only handles OTA callback, 
+ * rest is forwarded to app logic.
+ */
 static void mqtt_router_callback(const char *topic, const char *payload)
 {
-    // --- System-level commands (belong in main) ---
     if (strstr(topic, MQTT_OTA_SUBTOPIC) != NULL) {
         SYS_LOG("OTA Command Received!");
         sys_ota_start(&builtin_status_led, payload);
         return;
     }
-
-    // --- Everything else goes to app logic ---
     app_logic_handle_mqtt(topic, payload);
 }
 
-// ============================================================================
-// MAIN APPLICATION ENTRY
-// ============================================================================
 void app_main(void)
 {
-    // Give hardware power-rails a moment to stabilize before slamming the bus
     vTaskDelay(pdMS_TO_TICKS(500)); 
     SYS_LOG("=========================================");
     SYS_LOG("Terrasense Greenhouse Controller Booting!");
     SYS_LOG("=========================================");
 
-    // ------------------------------------------------------------------------
-    // PHASE 1: Core System Initialization
-    // ------------------------------------------------------------------------
+    //* ----- Core System Initialization -----
     sys_led_init(&builtin_status_led); 
     sys_led_set_state(&builtin_status_led, SYS_LED_STATE_BOOTING);
     esp_err_t ret = nvs_flash_init();
@@ -62,36 +49,29 @@ void app_main(void)
     }
     SYS_ERR_CHECK(ret, "Failed to initialize NVS");
 
-    // ------------------------------------------------------------------------
-    // PHASE 2: Hardware Peripherals Initialization
-    // ------------------------------------------------------------------------
+    //* ----- Hardware Peripherals Initialization -----
     SYS_LOG("Initializing Hardware Peripherals...");
     sensors_init(&builtin_status_led);
     actors_init(&builtin_status_led);
 
-    // ------------------------------------------------------------------------
-    // PHASE 3: Network Initialization
-    // ------------------------------------------------------------------------
+    //* ----- Network Initialization -----
     SYS_LOG("Initializing Networking Stack...");
     net_core_init(&builtin_status_led);
-    // Wait for IP (In the future, use FreeRTOS Event Groups instead of a blind delay)
+    // adding some delays to ensure we have a clean startup
     vTaskDelay(pdMS_TO_TICKS(5000));
     net_mqtt_init(&builtin_status_led, mqtt_router_callback);
     net_mqtt_start();
     vTaskDelay(pdMS_TO_TICKS(2000)); 
-    // Subscribe to OTA command topic
+    //* Subscribe to OTA command topic
     net_mqtt_subscribe(MQTT_OTA_SUBTOPIC, 1);
 
     sys_led_set_state(&builtin_status_led, SYS_LED_STATE_OK_DAY);
     SYS_LOG("Boot complete. Entering system monitor.");
-    // ------------------------------------------------------------------------
-    // PHASE 4: Application Logic
-    // ------------------------------------------------------------------------
+
+    //* ----- Application Logic -----
     app_logic_init(&builtin_status_led);
 
-    // ------------------------------------------------------------------------
-    // PHASE 5: The Main Loop (System Monitor)
-    // ------------------------------------------------------------------------
+    //* ----- The Main Loop (System Monitor) -----
     uint32_t uptime_minutes = 0;
     while (1) {
 
