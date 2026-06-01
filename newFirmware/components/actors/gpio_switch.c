@@ -4,7 +4,6 @@
 #include "driver/gpio.h"
 #include <string.h>
 
-// Keep track of the current logical state in RAM
 #if HARDWARE_SWITCH_ENABLED
 static bool switch_states[HARDWARE_SWITCH_COUNT] = {false};
 #endif
@@ -13,18 +12,17 @@ static sys_debug_led_t *status_led = NULL;
 
 void gpio_switch_init(sys_debug_led_t *debug_led)
 {
-    status_led = debug_led; // Store for potential debug LED flashes later
+    status_led = debug_led; 
 
 #if HARDWARE_SWITCH_ENABLED
     SYS_LOG("Initializing GPIO Switches. Configuring %d switches...", HARDWARE_SWITCH_COUNT);
 
     for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
-        // Determine physical level based on default logical state and active_high flag
         bool is_on = HARDWARE_SWITCH_CONFIG[i].default_state;
         int physical_level = is_on ? (HARDWARE_SWITCH_CONFIG[i].active_high ? 1 : 0)
                                    : (HARDWARE_SWITCH_CONFIG[i].active_high ? 0 : 1);
 
-        // Configure the GPIO
+        // configuration fo the GPIO
         gpio_config_t io_conf = {};
         io_conf.intr_type = GPIO_INTR_DISABLE;
         io_conf.mode = GPIO_MODE_OUTPUT;
@@ -33,10 +31,7 @@ void gpio_switch_init(sys_debug_led_t *debug_led)
         io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
         gpio_config(&io_conf);
 
-        // Set initial physical state BEFORE we finish config to prevent flickering
         gpio_set_level(HARDWARE_SWITCH_CONFIG[i].gpio_pin, physical_level);
-        
-        // Store logical state
         switch_states[i] = is_on;
 
         SYS_LOG("Worker: Bound Switch '%s' to GPIO %d (Default: %s)", 
@@ -52,7 +47,6 @@ bool gpio_switch_set_state(int index, bool logical_state)
 #if HARDWARE_SWITCH_ENABLED
     if (index < 0 || index >= HARDWARE_SWITCH_COUNT) return false;
 
-    // Translate logical ON/OFF to physical HIGH/LOW
     int physical_level = logical_state ? (HARDWARE_SWITCH_CONFIG[index].active_high ? 1 : 0)
                                        : (HARDWARE_SWITCH_CONFIG[index].active_high ? 0 : 1);
 

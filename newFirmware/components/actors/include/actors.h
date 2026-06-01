@@ -14,9 +14,9 @@ typedef struct {
     const char *name;
     const char *mqtt_device_id;
     int power_pin;
-    int tach_pin;      // The GPIO connected to the Tachometer (RPM). Set to -1 if not used.
-    int pwm_pin;       // The GPIO connected to the Fan's PWM wire (or the MOSFET gate)
-    bool is_4pin;      // true = Uses 25kHz standard. false = Uses 1kHz for MOSFET switching.
+    int tach_pin;      
+    int pwm_pin;       
+    bool is_4pin;      
 } fan_target_t;
 
 // API
