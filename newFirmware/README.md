@@ -6,14 +6,14 @@ TerraSense is a smart-terrarium controller built on the ESP32-C6. It provides Ho
 
 ## Hardware Requirements/Features
 * **Home Assistant Integration:** Uses MQTT Auto-Discovery for all peripherals for Home Assistant integration.
-* **Custom PCB:** We used a custom PCB to keep everyting clean
+* **Custom PCB:** We used a custom PCB to keep everything clean
 * **Sensor Support:**
   * **I²C:** SHT35 series (Temperature & Humidity) via multiplexer(TCA9548A).
   * **OneWire:** DS18B20.
   * **Binary:** Binary liquid level sensor(XKC-Y25-NPN).
 * **Actuator Support:**
   * **GPIO:** GPIO relays and Solid State Relays (SSR) for heaters, lights, and misting pumps.
-  * **Fans:** supporting 3(MOSFETs) and 4(PWM) pin fans
+  * **Fans:** supporting 3 and 4 pin fans
 
 ---
 
