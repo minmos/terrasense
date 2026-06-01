@@ -18,7 +18,7 @@ static void sys_led_task(void *arg)
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(100)); // 10 ticks per second
 
-        // --- 1. HANDLE DEBUG OVERRIDES ---
+        // --- handle debug overrides from sys_led_notify ---
         if (led_obj->override_blinks_left > 0) {
             was_overridden = true;
 
@@ -27,7 +27,6 @@ static void sys_led_task(void *arg)
                 led_obj->override_trigger = false;
             }
 
-            // Quick 100ms ON, 100ms OFF pattern
             if (override_tick == 0) {
                 sys_led_set_color(led_obj, led_obj->override_color, 40);
             } else if (override_tick == 1) {
@@ -43,7 +42,7 @@ static void sys_led_task(void *arg)
             continue; 
         }
 
-        // --- 2. NORMAL STATE MACHINE ---
+        // --- normal state machine for the controller states ---
         tick_count++;
         
         bool state_changed = (led_obj->current_state != last_state) || was_overridden;
@@ -57,12 +56,10 @@ static void sys_led_task(void *arg)
 
         switch (led_obj->current_state) {
             case SYS_LED_STATE_BOOTING:
-                // Solid Yellow to indicate initialization
                 if (state_changed) sys_led_set_color(led_obj, LED_COLOR_YELLOW, 20);
                 break;
 
             case SYS_LED_STATE_ERROR:
-                // Aggressive Fast Red Flash
                 if (state_changed || tick_count % 2 == 0) {
                     if (toggle_flag) sys_led_set_color(led_obj, LED_COLOR_RED, 80);
                     else sys_led_set_color(led_obj, LED_COLOR_BLACK, 0);
@@ -71,12 +68,10 @@ static void sys_led_task(void *arg)
                 break;
 
             case SYS_LED_STATE_OK_DAY:
-                // Solid Dim Green
                 if (state_changed) sys_led_set_color(led_obj, LED_COLOR_GREEN, 5);
                 break;
 
             case SYS_LED_STATE_OK_NIGHT:
-                // Off (or extremely dim blue) so it doesn't disturb the terrarium
                 if (state_changed) sys_led_set_color(led_obj, LED_COLOR_BLACK, 0);
                 break;
 
@@ -114,7 +109,6 @@ esp_err_t sys_led_init(sys_debug_led_t *led_obj)
     return err;
 }
 
-//! for the currnet board R and G seem to be flipped due to WS2812 thingi
 esp_err_t sys_led_set_color(sys_debug_led_t *led_obj, sys_led_color_t color, uint8_t brightness_pct)
 {
     if (led_obj == NULL || led_obj->handle == NULL) return ESP_ERR_INVALID_STATE;
@@ -149,7 +143,6 @@ esp_err_t sys_led_notify(sys_debug_led_t *led_obj, sys_led_color_t color, uint8_
     led_obj->override_blinks_left = n_blinks;
     return ESP_OK;
 #else
-    // Silently ignore debug flashes in production mode
     return ESP_OK; 
 #endif
 }
