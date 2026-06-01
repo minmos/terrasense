@@ -4,11 +4,13 @@
 #include "cJSON.h"    
 #include "sys_utils.h"
 
+/**
+ * This here could be changed or extended if additional things are needed for homeassistant. Then we also have to change the ha_discovery_config_t in app_logic.c
+ */
 bool hass_discovery_publish(const ha_discovery_config_t *config)
 {
     if (config == NULL) return false;
 
-    // 1. Determine the HA Component String 
     const char *component_str = "";
     switch (config->type) {
         case HA_ENTITY_SENSOR: component_str = "sensor"; break;
@@ -18,43 +20,33 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
         case HA_ENTITY_NUMBER: component_str = "number"; break;
         default: return false;
     }
+    const char *discovery_id = config->unique_id ? config->unique_id : config->device_id; // autodiscovery uses unique id if specified, needed for SHT35 where a single device has 2 measurements, here same device id but different unique di
 
-    const char *discovery_id = config->unique_id ? config->unique_id : config->device_id;
-
-    // 2. Generate the dynamic topics 
     char discovery_topic[256];
     char state_topic[256];
     char command_topic[256];
-    
     snprintf(discovery_topic, sizeof(discovery_topic), MQTT_HASS_AUTODISCOVERY_TOPIC("%s", "%s"), component_str, discovery_id);
     snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("%s", "%s"), component_str, config->device_id);
-    
-    // Both Switches and Fans use basic ON/OFF command topics
     if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN || config->type == HA_ENTITY_NUMBER) {
         snprintf(command_topic, sizeof(command_topic), MQTT_COMMAND_TOPIC("%s", "%s"), component_str, config->device_id);
     }
 
-    // 3. Build the JSON Object 
+    // mqtt autodiscovery is a basic json object
     cJSON *root = cJSON_CreateObject();
-    
     cJSON_AddStringToObject(root, "name", config->name);
     cJSON_AddStringToObject(root, "unique_id", discovery_id); 
     cJSON_AddStringToObject(root, "state_topic", state_topic);
-
     if (config->device_class) cJSON_AddStringToObject(root, "device_class", config->device_class);
     if (config->state_class) cJSON_AddStringToObject(root, "state_class", config->state_class);
     if (config->unit_of_measurement) cJSON_AddStringToObject(root, "unit_of_measurement", config->unit_of_measurement);
     if (config->icon) cJSON_AddStringToObject(root, "icon", config->icon);
-    
     if (config->value_template) cJSON_AddStringToObject(root, "value_template", config->value_template);
     if (config->availability_topic) cJSON_AddStringToObject(root, "availability_topic", config->availability_topic);
     if (config->force_update) cJSON_AddTrueToObject(root, "force_update");
-
     if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN || config->type == HA_ENTITY_NUMBER) {
         cJSON_AddStringToObject(root, "command_topic", command_topic);
     }
-
-    // --- FAN SPECIFIC CAPABILITIES ---
+    //adding additional specs for fans and number
     if (config->type == HA_ENTITY_FAN) {
         char pct_cmd[256];
         char pct_state[256];
@@ -74,8 +66,6 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
             cJSON_AddStringToObject(root, "mode", config->mode);
         }
     }
-
-    // --- Device Grouping ---
     cJSON *device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", TERRARIUM_ID);
     cJSON_AddStringToObject(device, "name", TERRARIUM_ID);
@@ -83,13 +73,10 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     cJSON_AddStringToObject(device, "model", "ESP32-C6");
     cJSON_AddItemToObject(root, "device", device);
 
-    // 4. Convert and Publish
     char *json_string = cJSON_PrintUnformatted(root);
     bool success = net_mqtt_publish_raw(discovery_topic, json_string, 1, true); 
-
     free(json_string);
     cJSON_Delete(root);
-
     SYS_LOG("WE did autodiscovery for device_id: %s", discovery_id);
     return success;
 }
