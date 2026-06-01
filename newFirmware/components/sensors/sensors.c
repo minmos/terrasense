@@ -8,17 +8,15 @@
 #include "sensor_ds18b20.h"
 #include "sensor_sht3x.h"
 #include "sensor_binary.h"
-// Required for the underlying I2C library shared by sensors
 #include "i2cdev.h"
 
-// --- Private State ---
 static sensor_data_t current_sensor_data;
 static SemaphoreHandle_t sensor_mutex = NULL;
-
 static sys_debug_led_t *status_led = NULL;
+
 /**
- * This is a background task fetching all the sensor values that are available and storing them in current_data. 
- * current_data is protected by sensor_mutex. 
+ * This is a background task fetching all the sensor values that are available and storing them in current_sensor_data. 
+ * current_sensor_data is protected by sensor_mutex. 
  */
 static void sensor_polling_task(void *pvParameter)
 {

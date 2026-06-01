@@ -9,10 +9,9 @@
 
 
 static sys_debug_led_t *status_led = NULL;
-// Internal hardware state
 static sht3x_t sht3x_handles[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY];
 static bool sht3x_active[SENSOR_SHT3X_COMPONENT_MAX_CAPACITY] = {false};
-static i2c_dev_t mux_dev; // The multiplexer device descriptor
+static i2c_dev_t mux_dev;
 
 static int configured_sht3x_count = 0;
 static const sht3x_target_t *sht_configs = NULL;
@@ -25,25 +24,21 @@ void sensor_sht3x_init(int i2c_port, int sda_pin, int scl_pin, const sht3x_targe
     
     SYS_LOG("Initializing SHT3X Worker and MUX. Configuring %d sensors...", target_count);
 
-    // 1. Initialize the Multiplexer descriptor
+    // initializing multiplexer
     memset(&mux_dev, 0, sizeof(i2c_dev_t));
     esp_err_t mux_res = tca9548_init_desc(&mux_dev, MUX_I2C_ADDRESS, i2c_port, sda_pin, scl_pin);
     if (mux_res != ESP_OK) {
         SYS_LOG_ERR("Failed to initialize TCA9548A Multiplexer descriptor!");
-        return; // If the MUX fails, we can't talk to any sensors
+        return; 
     }
 
-    // 2. Initialize each sensor
     for (int i = 0; i < target_count; i++) {
         memset(&sht3x_handles[i], 0, sizeof(sht3x_t));
         
-        // Setup the sensor descriptor
         ESP_ERROR_CHECK(sht3x_init_desc(&sht3x_handles[i], SHT35_I2C_ADDR, i2c_port, sda_pin, scl_pin));
         
         SYS_LOG("Worker: Connecting MUX to channel %d for '%s'", targets[i].mux_channel, targets[i].name);
         
-        // SWITCH MUX CHANNEL BEFORE INIT
-        // tca9548_set_channels takes a bitmask. Channel 0 = 1<<0, Channel 1 = 1<<1, etc.
         esp_err_t channel_res = tca9548_set_channels(&mux_dev, (1 << targets[i].mux_channel));
         
         if (channel_res != ESP_OK) {
@@ -52,7 +47,6 @@ void sensor_sht3x_init(int i2c_port, int sda_pin, int scl_pin, const sht3x_targe
             continue;
         }
 
-        // Now that the I2C bus is routed to the physical sensor, initialize it
         esp_err_t res = sht3x_init(&sht3x_handles[i]);
         if (res == ESP_OK) {
             sht3x_active[i] = true;
@@ -73,16 +67,14 @@ void sensor_sht3x_read(float *output_temps, float *output_hums)
             continue;
         }
 
-        // Route the I2C bus to the correct physical sensor
         esp_err_t mux_res = tca9548_set_channels(&mux_dev, (1 << sht_configs[i].mux_channel));
         
         if (mux_res != ESP_OK) {
             output_temps[i] = SENSOR_VALUE_INVALID;
             output_hums[i]  = SENSOR_VALUE_INVALID;
-            continue; // Skip reading if MUX failed to switch
+            continue; 
         }
 
-        // Read the sensor
         float t, h;
         esp_err_t res = sht3x_measure(&sht3x_handles[i], &t, &h);
         
