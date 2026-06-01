@@ -8,7 +8,7 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_sntp.h"
-#include "lwip/netdb.h" // For DNS resolution (Watchdog)
+#include "lwip/netdb.h" 
 
 #include "esp_netif.h"
 
@@ -18,7 +18,7 @@
 
 static sys_debug_led_t *builtin_status_led = NULL;
 
-// --- 1. SNTP Callback ---
+//SNTP Callback
 static void time_sync_notification_cb(struct timeval *tv)
 {
     SYS_LOG("NTP Time successfully synchronized!");
@@ -26,7 +26,7 @@ static void time_sync_notification_cb(struct timeval *tv)
     time_t now;
     struct tm timeinfo;
     time(&now);
-    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1); // Set timezone to Central Europe
+    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1); // Central Europe timezhone
     tzset();
     localtime_r(&now, &timeinfo);
     
@@ -35,7 +35,6 @@ static void time_sync_notification_cb(struct timeval *tv)
     SYS_LOG("Current local time: %s", strftime_buf);
 }
 
-// --- 2. Network Watchdog Task ---
 static void network_watchdog_task(void *pvParameters)
 {
     int fail_count = 0;
@@ -62,7 +61,6 @@ static void network_watchdog_task(void *pvParameters)
     }
 }
 
-// --- 3. Main Event Handler ---
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -96,15 +94,12 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         }
 
         if (builtin_status_led) sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_DAY);
-        // --- START BACKGROUND SERVICES ONCE WE HAVE AN IP ---
 
-        // A. Start SNTP Time Sync (Non-blocking)
         esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
         esp_sntp_setservername(0, "pool.ntp.org");
         sntp_set_time_sync_notification_cb(time_sync_notification_cb);
         esp_sntp_init();
 
-        // B. Start Watchdog Task
         static TaskHandle_t watchdog_handle = NULL;
         if (watchdog_handle == NULL) {
             xTaskCreate(network_watchdog_task, "net_watchdog", 4096, NULL, 5, &watchdog_handle);
@@ -112,10 +107,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
 }
 
-// --- 4. Initialization ---
 void net_core_init(sys_debug_led_t *led_obj) 
 {
-    builtin_status_led = led_obj; // need to get this to reference builtin led
+    builtin_status_led = led_obj; 
     SYS_ERR_CHECK(esp_netif_init(), "Failed to initialize TCP/IP stack");
     SYS_ERR_CHECK(esp_event_loop_create_default(), "Failed to create default event loop");
     
@@ -128,7 +122,7 @@ void net_core_init(sys_debug_led_t *led_obj)
     esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL);
     esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL);
 
-    wifi_config_t wifi_config = {
+    wifi_config_t wifi_config = { // using here the defines we made through idf.py menuconfig which reside in sdconfig file
         .sta = {
             .ssid = CONFIG_WIFI_SSID,
             .password = CONFIG_WIFI_PASSWORD,
