@@ -150,9 +150,9 @@ static float get_number_value_by_id(const char *mqtt_device_id, float fallback)
     return fallback;
 }
 
-// ----------------------------------------------------------------------------
-// Discovery
-// ----------------------------------------------------------------------------
+/**
+ * Here we define our mqtt autodiscovery, if we want to change something to that, we also have to change components/net_mqtt/hass_discovery.c
+ */
 static void run_hass_discovery(void)
 {
     SYS_LOG("Publishing HASS discovery...");
@@ -187,8 +187,8 @@ static void run_hass_discovery(void)
         
         ha_discovery_config_t cfg_temp = {
             .type                = HA_ENTITY_SENSOR,
-            .device_id           = HARDWARE_SHT3X_CONFIG[i].mqtt_device_id, // Shared topic base
-            .unique_id           = temp_uid,                                // Unique HASS identifier
+            .device_id           = HARDWARE_SHT3X_CONFIG[i].mqtt_device_id, 
+            .unique_id           = temp_uid,                                
             .name                = temp_name,
             .device_class        = "temperature",
             .state_class         = "measurement",
@@ -207,8 +207,8 @@ static void run_hass_discovery(void)
         
         ha_discovery_config_t cfg_hum = {
             .type                = HA_ENTITY_SENSOR,
-            .device_id           = HARDWARE_SHT3X_CONFIG[i].mqtt_device_id, // Shared topic base
-            .unique_id           = hum_uid,                                 // Unique HASS identifier
+            .device_id           = HARDWARE_SHT3X_CONFIG[i].mqtt_device_id, 
+            .unique_id           = hum_uid,                                 
             .name                = hum_name,
             .device_class        = "humidity",
             .state_class         = "measurement",
@@ -225,7 +225,7 @@ static void run_hass_discovery(void)
     SYS_LOG("Binary sensors HASS discovery...");
     for (int i = 0; i < HARDWARE_BINARY_COUNT; i++) {
         ha_discovery_config_t cfg_binary = {
-            .type                = HA_ENTITY_BINARY_SENSOR, // Assuming HA_ENTITY_BINARY_SENSOR exists in your hass_discovery.h
+            .type                = HA_ENTITY_BINARY_SENSOR, 
             .device_id           = HARDWARE_BINARY_CONFIG[i].mqtt_device_id,
             .name                = HARDWARE_BINARY_CONFIG[i].name,
             // .device_class        = HARDWARE_BINARY_CONFIG[i].device_class, // E.g. "door" // https://www.home-assistant.io/integrations/binary_sensor/
@@ -257,7 +257,6 @@ static void run_hass_discovery(void)
     SYS_LOG("Fans HASS discovery...");
     for (int i = 0; i < HARDWARE_FAN_COUNT; i++) {
         
-        // 1. The Fan Control Entity
         ha_discovery_config_t cfg_fan = {
             .type                = HA_ENTITY_FAN,
             .device_id           = HARDWARE_FAN_CONFIG[i].mqtt_device_id,
@@ -267,7 +266,7 @@ static void run_hass_discovery(void)
         };
         hass_discovery_publish(&cfg_fan);
 
-        // 2. The Tachometer Sensor Entity (If Supported)
+        // tachometer functionality only for 4 pin fans
         if (HARDWARE_FAN_CONFIG[i].tach_pin != FAN_UNUSED_PIN) {
             char rpm_name[64];
             char rpm_uid[64];
@@ -276,7 +275,6 @@ static void run_hass_discovery(void)
 
             ha_discovery_config_t cfg_rpm = {
                 .type                = HA_ENTITY_SENSOR,
-                // Using the exact same device_id groups the RPM sensor beautifully under the Fan card in HA
                 .device_id           = HARDWARE_FAN_CONFIG[i].mqtt_device_id, 
                 .unique_id           = rpm_uid,
                 .name                = rpm_name,
@@ -303,7 +301,7 @@ static void run_hass_discovery(void)
             .min_value           = HARDWARE_NUMBER_CONFIG[i].min_val,
             .max_value           = HARDWARE_NUMBER_CONFIG[i].max_val,
             .step                = HARDWARE_NUMBER_CONFIG[i].step,
-            .mode                = HARDWARE_NUMBER_CONFIG[i].mode, // Use "box" if you prefer text input
+            .mode                = HARDWARE_NUMBER_CONFIG[i].mode, 
             .force_update        = false,
         };
         hass_discovery_publish(&cfg_num);
@@ -355,25 +353,19 @@ void app_logic_handle_mqtt(const char *topic, const char *payload)
         return;
     }
 
-
 #if HARDWARE_SWITCH_ENABLED
-    // Check if the incoming topic matches any of our configured switches
+    // callbacks for switches 
     for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
         char expected_cmd_topic[128];
         snprintf(expected_cmd_topic, sizeof(expected_cmd_topic), MQTT_COMMAND_TOPIC("switch", "%s"), HARDWARE_SWITCH_CONFIG[i].mqtt_device_id);
 
         if (strcmp(topic, expected_cmd_topic) == 0) {
-            // Determine requested state
             bool new_state = (strcmp(payload, "ON") == 0);
-            
-            // Set the physical hardware
             gpio_switch_set_state(i, new_state);
-            
-            // Immediately confirm the new state to Home Assistant so the UI toggle snaps into place
             publish_switch_state(i, new_state);
             
             SYS_LOG("MQTT Triggered Switch '%s' -> %s", HARDWARE_SWITCH_CONFIG[i].name, new_state ? "ON" : "OFF");
-            return; // Command handled, exit function
+            return; 
         }
     }
 #endif
@@ -386,10 +378,8 @@ void app_logic_handle_mqtt(const char *topic, const char *payload)
         snprintf(expected_cmd_topic, sizeof(expected_cmd_topic), MQTT_COMMAND_TOPIC("fan", "%s"), HARDWARE_FAN_CONFIG[i].mqtt_device_id);
         snprintf(expected_pct_topic, sizeof(expected_pct_topic), MQTT_BASE_TOPIC "/fan/%s/percentage_command", HARDWARE_FAN_CONFIG[i].mqtt_device_id);
 
-        // 1. Handle Power Commands (ON/OFF)
-        if (strcmp(topic, expected_cmd_topic) == 0) {
+        if (strcmp(topic, expected_cmd_topic) == 0) { //mapped speed logic for fans is implemented in actors component
             bool turn_on = (strcmp(payload, "ON") == 0);
-            // If toggled ON, default to 100%. If OFF, cut to 0%.
             uint8_t new_speed = turn_on ? 100 : 0;
             
             actor_fan_set_speed(i, new_speed);
@@ -397,8 +387,6 @@ void app_logic_handle_mqtt(const char *topic, const char *payload)
             SYS_LOG("MQTT Triggered Fan '%s' Power -> %s", HARDWARE_FAN_CONFIG[i].name, payload);
             return;
         }
-
-        // 2. Handle Precision Speed Commands (0-100 Slider)
         if (strcmp(topic, expected_pct_topic) == 0) {
             int percent = atoi(payload);
             
@@ -417,13 +405,8 @@ void app_logic_handle_mqtt(const char *topic, const char *payload)
 
         if (strcmp(topic, expected_cmd_topic) == 0) {
             float new_val = atof(payload);
-            
-            // Save to memory
             current_number_states[i] = new_val;
-            
-            // Confirm the state back to Home Assistant
             publish_number_state(i, new_val);
-            
             SYS_LOG("MQTT Triggered Number '%s' -> %.2f", HARDWARE_NUMBER_CONFIG[i].name, new_val);
             return; 
         }
@@ -472,14 +455,12 @@ static void sensor_data_publish_task(void *pvParameters)
         for (int i = 0; i < HARDWARE_SHT3X_COUNT; i++) {
             if (data.sht3x_temps[i] == SENSOR_VALUE_INVALID || data.sht3x_hums[i] == SENSOR_VALUE_INVALID) continue;
             
-            // Bundle temp and humidity in one JSON payload
             cJSON *root = cJSON_CreateObject();
             cJSON_AddNumberToObject(root, "temperature", data.sht3x_temps[i]);
             cJSON_AddNumberToObject(root, "humidity", data.sht3x_hums[i]);
             char *payload = cJSON_PrintUnformatted(root);
 
             char state_topic[128];
-            // Publish to the shared base topic!
             snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("sensor", "%s"), HARDWARE_SHT3X_CONFIG[i].mqtt_device_id);
 
             net_mqtt_publish_raw(state_topic, payload, 1, 0);
@@ -493,13 +474,10 @@ static void sensor_data_publish_task(void *pvParameters)
         for (int i = 0; i < HARDWARE_BINARY_COUNT; i++) {
             cJSON *root = cJSON_CreateObject();
             
-            // Home Assistant binary sensors usually expect "ON" or "OFF" strings
             cJSON_AddStringToObject(root, "state", data.binary_states[i] ? "ON" : "OFF");
             char *payload = cJSON_PrintUnformatted(root);
-
             char state_topic[128];
             snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("binary_sensor", "%s"), HARDWARE_BINARY_CONFIG[i].mqtt_device_id);
-
             net_mqtt_publish_raw(state_topic, payload, 1, 0);
             
             free(payload);
@@ -561,18 +539,10 @@ static void gpio_task(void *pvParameters)
 
 #if HARDWARE_SWITCH_ENABLED
         for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
-            // Read whatever the state currently is (might have been changed by MQTT!)
             bool current_state = gpio_switch_get_state(i);
-            
-            // Invert it
             bool new_state = !current_state;
-            
-            // Apply it
             gpio_switch_set_state(i, new_state);
-            
-            // Notify Home Assistant of the background change
             publish_switch_state(i, new_state);
-            
             SYS_LOG("Background Loop toggled '%s': %s", HARDWARE_SWITCH_CONFIG[i].name, new_state ? "ON" : "OFF");
         }
 #endif
