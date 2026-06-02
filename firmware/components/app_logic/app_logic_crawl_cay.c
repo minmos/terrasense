@@ -15,6 +15,7 @@
 #include "nvs.h"
 #include <time.h>
 
+static sys_debug_led_t *builtin_status_led = NULL;
 
 
 static bool last_is_day = false;
@@ -601,7 +602,7 @@ static void control_task(void *pvParameters)
     int right_platform_ds18b20 = -1;
     for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
         if (strcmp(HARDWARE_DS18B20_CONFIG[i].name, HEATLAMP_DS18B20_NAME) == 0) {
-            heater_ds18b20 = i;
+            heatlamp_ds18b20 = i;
         }
         if (strcmp(HARDWARE_DS18B20_CONFIG[i].name, RIGHT_PLATFORM_DS18B20_NAME) == 0) {
             right_platform_ds18b20 = i;
@@ -609,16 +610,25 @@ static void control_task(void *pvParameters)
     }
     
     if (heatlamp_ds18b20 == -1) {
-        SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", HEATLAMP_DS18B20_NAME);
+        SYS_LOG_ERR("Automation error: Could not find DS18B20 sensor with name '%s'", HEATLAMP_DS18B20_NAME);
     }
 
     if (right_platform_ds18b20 == -1) {
-        SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", RIGHT_PLATFORM_DS18B20_NAME);
+        SYS_LOG_ERR("Automation error: Could not find DS18B20 sensor with name '%s'", RIGHT_PLATFORM_DS18B20_NAME);
     }
 
     int heater_switch_idx = gpio_switch_get_index_by_id("ceramic_heater");
     int lights_switch_idx = gpio_switch_get_index_by_id("lights");
     int mister_switch_idx = gpio_switch_get_index_by_id("misting_system");
+
+    if (heatlamp_ds18b20 == -1 || right_platform_ds18b20 == -1 || 
+        heater_switch_idx == -1 || lights_switch_idx == -1 || mister_switch_idx == -1) {
+        SYS_LOG_ERR("Automation error: Missing critical hardware config. Halting control task.");
+        sys_led_set_state(builtin_status_led, SYS_LED_STATE_ERROR);
+        while (1) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    }
 
     static time_t fan_off_time = 0;
     static time_t mister_off_time = 0;
@@ -652,9 +662,14 @@ static void control_task(void *pvParameters)
             if (current_right_platform_temp != SENSOR_VALUE_INVALID) {
                 float current_target_temp = get_number_value_by_id(is_day ? "target_temp_day" : "target_temp_night", 25.0f);
                 bool heater_should_be_on = (current_right_platform_temp < current_target_temp);
+                
+                // force off if heatlamp gets too hot (this will happen often, i have a shitty terrarium design )
+                if (current_heatlamp_temp != SENSOR_VALUE_INVALID && current_heatlamp_temp > MAXIMUM_HEATLAMP_TEMP) {
+                    heater_should_be_on = false;
+                }
+                
                 bool current_heater_state = gpio_switch_get_state(heater_switch_idx);
-                // if the current_heatlamp_temp is invalid, this is fine, since it is smaller than MAXIMUM_HEATLAMP_TEMP and the termal fuse handles the safety stuff
-                if (current_heater_state != heater_should_be_on && current_heatlamp_temp <= MAXIMUM_HEATLAMP_TEMP) { 
+                if (current_heater_state != heater_should_be_on) { 
                     gpio_switch_set_state(heater_switch_idx, heater_should_be_on);
                     publish_switch_state(heater_switch_idx, heater_should_be_on);
                     SYS_LOG("Automation: Heater turned %s (Temp: %.2fC, Target: %.2fC)", 
@@ -690,13 +705,11 @@ static void control_task(void *pvParameters)
         //sunset
         if (is_day == false && last_is_day == true){
             SYS_LOG("Automation: It's sunset at: %02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-            if (mister_switch_idx != -1) {
-                float mist_time_seconds = get_number_value_by_id("sunset_mist_time_seconds", 120.0f);
-                mister_off_time = now + (time_t)mist_time_seconds;
-                gpio_switch_set_state(mister_switch_idx, true);
-                publish_switch_state(mister_switch_idx, true);
-                SYS_LOG("Automation: Sunset triggered. Misting system started for %.0f seconds.", mist_time_seconds);
-            }
+            float mist_time_seconds = get_number_value_by_id("sunset_mist_time_seconds", 120.0f);
+            mister_off_time = now + (time_t)mist_time_seconds;
+            gpio_switch_set_state(mister_switch_idx, true);
+            publish_switch_state(mister_switch_idx, true);
+            SYS_LOG("Automation: Sunset triggered. Misting system started for %.0f seconds.", mist_time_seconds);
         }
 
 #if HARDWARE_FAN_ENABLED
@@ -709,10 +722,8 @@ static void control_task(void *pvParameters)
 #endif
 
         if (mister_off_time != 0 && now >= mister_off_time) {
-            if (mister_switch_idx != -1) {
-                gpio_switch_set_state(mister_switch_idx, false);
-                publish_switch_state(mister_switch_idx, false);
-            }
+            gpio_switch_set_state(mister_switch_idx, false);
+            publish_switch_state(mister_switch_idx, false);
             mister_off_time = 0;
             SYS_LOG("Automation: Mister turned OFF after sunset spray duration");
         }
@@ -728,6 +739,10 @@ static void control_task(void *pvParameters)
 // ----------------------------------------------------------------------------
 void app_logic_init(sys_debug_led_t *led)
 {
+
+    builtin_status_led = led;
+
+
     load_sun_times_from_nvs();
     run_hass_discovery();
     net_mqtt_subscribe("cmd/sunrise", 1);
