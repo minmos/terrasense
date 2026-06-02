@@ -160,8 +160,8 @@ static void run_hass_discovery(void)
 
     ha_discovery_config_t cfg_sys_error = {
         .type                = HA_ENTITY_SENSOR,
-        .device_id           = "sys_error_msg",
-        .name                = "System Error Message",
+        .device_id           = "error_msg",
+        .name                = "Error Msg",
         .icon                = "mdi:alert-circle",
         .availability_topic  = MQTT_AVAILABILITY_TOPIC,
         .force_update        = false,
@@ -606,7 +606,7 @@ static void publish_system_error(const char* msg)
 {
     if (!net_mqtt_is_connected()) return;
     char state_topic[128];
-    snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("sensor", "sys_error_msg"));
+    snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("sensor", "error_msg"));
     net_mqtt_publish_raw(state_topic, msg, 1, 1);
 }
 

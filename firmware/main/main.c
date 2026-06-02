@@ -36,7 +36,7 @@ void app_main(void)
 {
     vTaskDelay(pdMS_TO_TICKS(500)); 
     SYS_LOG("=========================================");
-    SYS_LOG("Terrasense Greenhouse Controller Booting!");
+    SYS_LOG("Terrasense Booting!");
     SYS_LOG("=========================================");
 
 #ifdef CONFIG_TERRARIUM_CRAWL_CAY
