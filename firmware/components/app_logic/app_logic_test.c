@@ -158,6 +158,16 @@ static void run_hass_discovery(void)
 {
     SYS_LOG("Publishing HASS discovery...");
 
+    ha_discovery_config_t cfg_sys_error = {
+        .type                = HA_ENTITY_SENSOR,
+        .device_id           = "sys_error_msg",
+        .name                = "System Error Message",
+        .icon                = "mdi:alert-circle",
+        .availability_topic  = MQTT_AVAILABILITY_TOPIC,
+        .force_update        = false,
+    };
+    hass_discovery_publish(&cfg_sys_error);
+
 #if HARDWARE_DS18B20_ENABLED
     SYS_LOG("DS18B20 sensors HASS discovery...");
     for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
@@ -592,10 +602,20 @@ static void fan_data_publish_task(void *pvParameters)
 #endif
 
 
+static void publish_system_error(const char* msg)
+{
+    if (!net_mqtt_is_connected()) return;
+    char state_topic[128];
+    snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("sensor", "sys_error_msg"));
+    net_mqtt_publish_raw(state_topic, msg, 1, 1);
+}
+
 static void control_task(void *pvParameters)
 {
     SYS_LOG("control_task started. Background automation active.");
     sensor_data_t sensor_data;
+
+    publish_system_error("Sample Test Error: Starting Control Task!");
 
     // Cache the hardware indices once at startup
     int heater_ds18b20 = -1;
@@ -615,6 +635,7 @@ static void control_task(void *pvParameters)
 
     if (heater_ds18b20 == -1) {
         SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", HEATER_DS18B20_NAME);
+        publish_system_error("invalid heater ds18b20, setup failed");
     }
     
     last_is_day = check_is_day();

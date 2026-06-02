@@ -158,6 +158,16 @@ static void run_hass_discovery(void)
 {
     SYS_LOG("Publishing HASS discovery...");
 
+    ha_discovery_config_t cfg_sys_error = {
+        .type                = HA_ENTITY_SENSOR,
+        .device_id           = "sys_error_msg",
+        .name                = "System Error Message",
+        .icon                = "mdi:alert-circle",
+        .availability_topic  = MQTT_AVAILABILITY_TOPIC,
+        .force_update        = false,
+    };
+    hass_discovery_publish(&cfg_sys_error);
+
 #if HARDWARE_DS18B20_ENABLED
     SYS_LOG("DS18B20 sensors HASS discovery...");
     for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
@@ -592,10 +602,20 @@ static void fan_data_publish_task(void *pvParameters)
 #endif
 
 
+static void publish_system_error(const char* msg)
+{
+    if (!net_mqtt_is_connected()) return;
+    char state_topic[128];
+    snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("sensor", "sys_error_msg"));
+    net_mqtt_publish_raw(state_topic, msg, 1, 1);
+}
+
 static void control_task(void *pvParameters)
 {
     SYS_LOG("control_task started. Background automation active.");
     sensor_data_t sensor_data;
+
+    // publish_system_error("Sample Test Error: Starting Control Task!");
 
     // Cache the hardware indices once at startup
     int heatlamp_ds18b20 = -1;
@@ -623,7 +643,9 @@ static void control_task(void *pvParameters)
 
     if (heatlamp_ds18b20 == -1 || right_platform_ds18b20 == -1 || 
         heater_switch_idx == -1 || lights_switch_idx == -1 || mister_switch_idx == -1) {
-        SYS_LOG_ERR("Automation error: Missing critical hardware config. Halting control task.");
+        const char *err_msg = "Automation error: something failed to set up, either a relay or a ds18b20 - this is a sys_config error";
+        SYS_LOG_ERR("%s", err_msg);
+        publish_system_error(err_msg);
         sys_led_set_state(builtin_status_led, SYS_LED_STATE_ERROR);
         while (1) {
             vTaskDelay(pdMS_TO_TICKS(1000));

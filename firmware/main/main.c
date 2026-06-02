@@ -39,7 +39,7 @@ void app_main(void)
     SYS_LOG("Terrasense Greenhouse Controller Booting!");
     SYS_LOG("=========================================");
 
-#ifdef CONFIG_TERRARIUM_CRWAL_CAY
+#ifdef CONFIG_TERRARIUM_CRAWL_CAY
     SYS_LOG("Running configuration: Terrarium Crawl Cay");
 #else
     SYS_LOG("Running configuration: Terrarium Test");
