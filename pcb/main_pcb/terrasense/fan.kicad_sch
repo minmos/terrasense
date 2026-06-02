@@ -1123,6 +1123,26 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "PWM Logic flipped"
+		(exclude_from_sim no)
+		(at 90.678 66.294 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "3a153040-9ca9-4063-b2f6-30301947da25")
+	)
+	(text "PWM Logic flipped"
+		(exclude_from_sim no)
+		(at 89.916 124.206 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "46efb1f3-836d-4c97-b86f-ec0683ae160c")
+	)
 	(junction
 		(at 93.98 52.07)
 		(diameter 0)
@@ -3221,7 +3241,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "BSS84"
+		(property "Value" "A3401"
 			(at 72.39 34.2899 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3243,7 +3263,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.tme.eu/Document/9e18544e3c24e82da23d9bbccfec4cfd/BSS84-FAI-DTE.pdf"
+		(property "Datasheet" ""
 			(at 78.74 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -3254,7 +3274,7 @@
 				)
 			)
 		)
-		(property "Description" "SOT-23 P-MOSFET enchancement mode transistor, 50V, 130mA, 360mW, Alternate KiCAD Library"
+		(property "Description" "SOT-23 P-MOSFET enchancement mode transistor, 50V, up to 4A"
 			(at 78.74 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -3391,7 +3411,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "BSS84"
+		(property "Value" "A3401"
 			(at 72.39 92.7099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3413,7 +3433,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.tme.eu/Document/9e18544e3c24e82da23d9bbccfec4cfd/BSS84-FAI-DTE.pdf"
+		(property "Datasheet" ""
 			(at 78.74 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3424,7 +3444,7 @@
 				)
 			)
 		)
-		(property "Description" "SOT-23 P-MOSFET enchancement mode transistor, 50V, 130mA, 360mW, Alternate KiCAD Library"
+		(property "Description" "SOT-23 P-MOSFET enchancement mode transistor, up to 4A"
 			(at 78.74 91.44 0)
 			(hide yes)
 			(show_name no)

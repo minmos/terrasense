@@ -1,0 +1,5 @@
+.history
+production
+terrasense-backups
+*.lck
+*.rpt

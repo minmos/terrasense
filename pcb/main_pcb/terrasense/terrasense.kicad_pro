@@ -90,6 +90,26 @@
           "expected overlap"
         ],
         [
+          "courtyards_overlap|140030000|60480000|85c19a6c-d422-491e-afad-7da7994dc292|ca0f908d-bb05-46ed-84db-5afeb51e8f1f",
+          ""
+        ],
+        [
+          "pth_inside_courtyard|138600000|61200000|2ddabda2-edf3-46b5-80d7-f3912f0e5c22|ca0f908d-bb05-46ed-84db-5afeb51e8f1f",
+          ""
+        ],
+        [
+          "pth_inside_courtyard|142000000|66000000|d9c0bd70-31b6-449f-a0a1-32d12010a1f6|ca0f908d-bb05-46ed-84db-5afeb51e8f1f",
+          ""
+        ],
+        [
+          "pth_inside_courtyard|145525000|63475000|ae13a5ec-891a-4751-aa04-71d9f60736d9|85c19a6c-d422-491e-afad-7da7994dc292",
+          ""
+        ],
+        [
+          "pth_inside_courtyard|145525000|68475000|1455f5fc-cffe-423a-96a7-882f575753e9|85c19a6c-d422-491e-afad-7da7994dc292",
+          ""
+        ],
+        [
           "shorting_items|114698400|61208000|af364876-091d-42d2-8e5d-953f92322ddf|e6b96e89-9b12-436f-a815-91b44228458e",
           ""
         ],
@@ -199,7 +219,7 @@
         "min_track_width": 0.2,
         "min_via_annular_width": 0.1,
         "min_via_diameter": 0.5,
-        "solder_mask_to_copper_clearance": 0.0,
+        "solder_mask_to_copper_clearance": 0.005,
         "use_height_for_length_calcs": true
       },
       "teardrop_options": [
@@ -740,7 +760,7 @@
         "uuid": "23e86ba0-86da-4b77-883c-d580cbeb388f"
       }
     ],
-    "used_designators": "U2,JP1,R26,J7-10,J22-28",
+    "used_designators": "U2,Qe1,JP1,R26,J7-10,J22-28",
     "variants": []
   },
   "sheets": [
