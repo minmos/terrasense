@@ -10,5 +10,6 @@
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=/workspaces/TerraSense/newFirmware/build"
-  ]
+  ],
+  "idf.flashType": "UART"
 }

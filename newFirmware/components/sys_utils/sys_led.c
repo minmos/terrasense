@@ -72,7 +72,7 @@ static void sys_led_task(void *arg)
                 break;
 
             case SYS_LED_STATE_OK_NIGHT:
-                if (state_changed) sys_led_set_color(led_obj, LED_COLOR_BLACK, 0);
+                if (state_changed) sys_led_set_color(led_obj, LED_COLOR_BLUE, 5);
                 break;
 
             case SYS_LED_STATE_OFF:

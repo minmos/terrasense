@@ -39,6 +39,12 @@ void app_main(void)
     SYS_LOG("Terrasense Greenhouse Controller Booting!");
     SYS_LOG("=========================================");
 
+#ifdef CONFIG_TERRARIUM_CRWAL_CAY
+    SYS_LOG("Running configuration: Terrarium Crawl Cay");
+#else
+    SYS_LOG("Running configuration: Terrarium Test");
+#endif
+
     //* ----- Core System Initialization -----
     sys_led_init(&builtin_status_led); 
     sys_led_set_state(&builtin_status_led, SYS_LED_STATE_BOOTING);

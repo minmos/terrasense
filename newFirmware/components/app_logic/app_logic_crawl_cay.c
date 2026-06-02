@@ -597,14 +597,25 @@ static void control_task(void *pvParameters)
     sensor_data_t sensor_data;
 
     // Cache the hardware indices once at startup
-    int heater_ds18b20 = -1;
+    int heatlamp_ds18b20 = -1;
+    int right_platform_ds18b20 = -1;
     for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
-        if (strcmp(HARDWARE_DS18B20_CONFIG[i].name, HEATER_DS18B20_NAME) == 0) {
+        if (strcmp(HARDWARE_DS18B20_CONFIG[i].name, HEATLAMP_DS18B20_NAME) == 0) {
             heater_ds18b20 = i;
-            break;
+        }
+        if (strcmp(HARDWARE_DS18B20_CONFIG[i].name, RIGHT_PLATFORM_DS18B20_NAME) == 0) {
+            right_platform_ds18b20 = i;
         }
     }
     
+    if (heatlamp_ds18b20 == -1) {
+        SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", HEATLAMP_DS18B20_NAME);
+    }
+
+    if (right_platform_ds18b20 == -1) {
+        SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", RIGHT_PLATFORM_DS18B20_NAME);
+    }
+
     int heater_switch_idx = gpio_switch_get_index_by_id("ceramic_heater");
     int lights_switch_idx = gpio_switch_get_index_by_id("lights");
     int mister_switch_idx = gpio_switch_get_index_by_id("misting_system");
@@ -612,9 +623,8 @@ static void control_task(void *pvParameters)
     static time_t fan_off_time = 0;
     static time_t mister_off_time = 0;
 
-    if (heater_ds18b20 == -1) {
-        SYS_LOG_ERR("Automation warning: Could not find DS18B20 sensor with name '%s'", HEATER_DS18B20_NAME);
-    }
+
+    
     
     last_is_day = check_is_day();
 
@@ -628,20 +638,27 @@ static void control_task(void *pvParameters)
 
         
         bool is_day = check_is_day();
-        
+
+        if (is_day){
+            sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_DAY);
+        }else{
+            sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_NIGHT);
+        }
        
         // --- 1. TEMPERATURE AUTOMATION (Heater) ---
         if (sensors_get_data(&sensor_data)) {
-            float current_heater_temp = sensor_data.ds18b20_temps[heater_ds18b20];
-            if (current_heater_temp != SENSOR_VALUE_INVALID) {
+            float current_heatlamp_temp = sensor_data.ds18b20_temps[heatlamp_ds18b20];
+            float current_right_platform_temp = sensor_data.ds18b20_temps[right_platform_ds18b20];
+            if (current_right_platform_temp != SENSOR_VALUE_INVALID) {
                 float current_target_temp = get_number_value_by_id(is_day ? "target_temp_day" : "target_temp_night", 25.0f);
-                bool heater_should_be_on = (current_heater_temp < current_target_temp);
+                bool heater_should_be_on = (current_right_platform_temp < current_target_temp);
                 bool current_heater_state = gpio_switch_get_state(heater_switch_idx);
-                if (current_heater_state != heater_should_be_on) {
+                // if the current_heatlamp_temp is invalid, this is fine, since it is smaller than MAXIMUM_HEATLAMP_TEMP and the termal fuse handles the safety stuff
+                if (current_heater_state != heater_should_be_on && current_heatlamp_temp <= MAXIMUM_HEATLAMP_TEMP) { 
                     gpio_switch_set_state(heater_switch_idx, heater_should_be_on);
                     publish_switch_state(heater_switch_idx, heater_should_be_on);
                     SYS_LOG("Automation: Heater turned %s (Temp: %.2fC, Target: %.2fC)", 
-                            heater_should_be_on ? "ON" : "OFF", current_heater_temp, current_target_temp);
+                            heater_should_be_on ? "ON" : "OFF", current_right_platform_temp, current_target_temp);
                 }
             }
         }

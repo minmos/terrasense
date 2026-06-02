@@ -24,3 +24,20 @@ menu "Terracotta MQTT Configuration"
             The full URI to your MQTT broker (e.g., mqtt://IP_ADDRESS:PORT).
 
 endmenu
+
+menu "Terrarium Configuration"
+
+    choice TERRARIUM_TARGET
+        prompt "Select Target Terrarium"
+        default TEST_TERRARIUM
+        help
+            Select which terrarium this firmware is being built for. This will determine which app_logic and sys_config files are used.
+
+        config TERRARIUM_TEST
+            bool "Terrarium Test"
+        
+        config TERRARIUM_CRAWL_CAY
+            bool "Terrarium Crawl Cay"
+    endchoice
+
+endmenu
