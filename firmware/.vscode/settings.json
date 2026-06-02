@@ -9,7 +9,7 @@
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=/workspaces/TerraSense/newFirmware/build"
+    "--compile-commands-dir=/workspaces/TerraSense/firmware/build"
   ],
   "idf.flashType": "UART"
 }

@@ -72,7 +72,7 @@ ruby -run -e httpd . -p 8070
 ```
 The payload then looks like this:
 ```text
-http://<your_ip>:8070/newFirmware.bin
+http://<your_ip>:8070/firmware.bin
 ```
 
 
