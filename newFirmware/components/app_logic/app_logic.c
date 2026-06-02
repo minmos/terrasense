@@ -437,8 +437,11 @@ static void sensor_data_publish_task(void *pvParameters)
         for (int i = 0; i < HARDWARE_DS18B20_COUNT; i++) {
             if (data.ds18b20_temps[i] == SENSOR_VALUE_INVALID) continue;
             
+            char temp_str[16];
+            snprintf(temp_str, sizeof(temp_str), "%.1f", data.ds18b20_temps[i]);
+            
             cJSON *root = cJSON_CreateObject();
-            cJSON_AddNumberToObject(root, "temperature", data.ds18b20_temps[i]);
+            cJSON_AddRawToObject(root, "temperature", temp_str);
             char *payload = cJSON_PrintUnformatted(root);
 
             char state_topic[128];
@@ -455,9 +458,14 @@ static void sensor_data_publish_task(void *pvParameters)
         for (int i = 0; i < HARDWARE_SHT3X_COUNT; i++) {
             if (data.sht3x_temps[i] == SENSOR_VALUE_INVALID || data.sht3x_hums[i] == SENSOR_VALUE_INVALID) continue;
             
+            char temp_str[16];
+            char hum_str[16];
+            snprintf(temp_str, sizeof(temp_str), "%.1f", data.sht3x_temps[i]);
+            snprintf(hum_str, sizeof(hum_str), "%.1f", data.sht3x_hums[i]);
+            
             cJSON *root = cJSON_CreateObject();
-            cJSON_AddNumberToObject(root, "temperature", data.sht3x_temps[i]);
-            cJSON_AddNumberToObject(root, "humidity", data.sht3x_hums[i]);
+            cJSON_AddRawToObject(root, "temperature", temp_str);
+            cJSON_AddRawToObject(root, "humidity", hum_str);
             char *payload = cJSON_PrintUnformatted(root);
 
             char state_topic[128];
