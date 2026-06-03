@@ -677,7 +677,7 @@ static void control_task(void *pvParameters)
             sys_led_set_state(builtin_status_led, SYS_LED_STATE_OK_NIGHT);
         }
        
-        // --- 1. TEMPERATURE AUTOMATION (Heater) ---
+        //temp automation
         if (sensors_get_data(&sensor_data)) {
             float current_heatlamp_temp = sensor_data.ds18b20_temps[heatlamp_ds18b20];
             float current_right_platform_temp = sensor_data.ds18b20_temps[right_platform_ds18b20];
@@ -703,6 +703,7 @@ static void control_task(void *pvParameters)
         
 
         //turn on/off the light
+        //TODO add possibility to manually turn off the light
         bool current_light_state = gpio_switch_get_state(lights_switch_idx);
         if (current_light_state != is_day) {
             gpio_switch_set_state(lights_switch_idx, is_day);
@@ -771,6 +772,7 @@ void app_logic_init(sys_debug_led_t *led)
     net_mqtt_subscribe("cmd/sunset", 1);
 
 #if HARDWARE_SWITCH_ENABLED //*maybe at startup publish default state again to HA
+
     // We must subscribe to the command topics, otherwise the broker won't send us the messages!
     for (int i = 0; i < HARDWARE_SWITCH_COUNT; i++) {
         char cmd_subtopic[128];
