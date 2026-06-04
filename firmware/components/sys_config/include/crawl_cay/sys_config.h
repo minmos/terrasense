@@ -20,7 +20,7 @@
 //* ****** MQTT Configurations ****** */
 //* ********************************* */
 #define MQTT_DOMAIN_PREFIX  "terrasense" 
-#define TERRARIUM_ID        "crawl_cay_terrarium"
+#define TERRARIUM_ID        "terrarium_crawl_cay"
 #define MQTT_BASE_TOPIC     MQTT_DOMAIN_PREFIX "/" TERRARIUM_ID
 
 #define MQTT_HASS_AUTODISCOVERY_TOPIC(component, device_id)     "homeassistant/" component "/" MQTT_DOMAIN_PREFIX "-" TERRARIUM_ID "-" device_id "/config"
@@ -37,7 +37,7 @@
 #define SENSOR_FETCHING_INTERVAL            2 * SECOND
 #define SENSOR_LOG_INTERVAL                 10 * SECOND
 #define SENSOR_DATA_PUBLISH_INTERVAL        10 * SECOND
-#define CONTROL_LOOP_INTERVAL               SECOND
+#define CONTROL_LOOP_INTERVAL               5 * SECOND
 
 //* --- Sensor Pins ---
 #define ONEWIRE_BUS_GPIO    4
@@ -61,7 +61,7 @@ static const ds18b20_target_t HARDWARE_DS18B20_CONFIG[] = {
     { .name = "Far Right", .mqtt_device_id = "far_right", .rom_address = 0xD707226171338E28 },
     { .name = "Right Platform", .mqtt_device_id = "right_platform", .rom_address = 0x930822547953C728 },
     { .name = "Left Platform", .mqtt_device_id = "left_platform", .rom_address = 0x4A0922537AB94C28 },
-    { .name = "Heatlamp", .mqtt_device_id = "heatlamp", .rom_address = 0xF93C88F649B8A828 }
+    { .name = "Heatlamp", .mqtt_device_id = "heatlamp", .rom_address = 0x133C6CF64930E728 }
 };
 
 // The compiler counts how many DS18B20 sensors we have, need to know the size for creating correct sensor_data_t struct

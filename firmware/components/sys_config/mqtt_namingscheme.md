@@ -1,13 +1,13 @@
 # MQTT Topic Hierarchy Proposal
 
-This document defines a structured MQTT topic scheme for managing multiple terrariums, enabling consistent auto-discovery (e.g., Home Assistant MQTT discovery), clear separation of state vs. command topics, and support for various sensor/actuator types.
+This document defines a structured MQTT topic scheme for managing multiple terrasense, enabling consistent auto-discovery (e.g., Home Assistant MQTT discovery), clear separation of state vs. command topics, and support for various sensor/actuator types.
 
 ## Core Structure
 
 Basic pattern:  
-`terrariums/<terrarium_id>/<component_type>/<device_id>/<attribute>`
+`terrasense/<terrarium_id>/<component_type>/<device_id>/<attribute>`
 
-- **terrariums** – fixed domain prefix, equivalent to `MQTT_BASE_TOPIC` in `sys_config.h`
+- **terrasense** – fixed domain prefix, equivalent to `MQTT_BASE_TOPIC` in `sys_config.h`
 - **<terrarium_id>** – unique identifier per terrarium (e.g., `rainforest_01`, `desert_03`)  
 - **<component_type>** – one of: `sensor`, `switch`, `number`, `fan`, `binary_sensor`  
 - **<device_id>** – logical name of the physical device + unique suffix/description, concatinated with `_` (e.g., `ds18b20_toprightcorner`, `ssr_heatinglamp`)  
@@ -28,11 +28,11 @@ For Home Assistant MQTT auto-discovery, use:
 
 `homeassistant/<component_type>/<object_id>/config`
 
-`object_id` is a concatination with `-` of `terrariums`, `terrarium_id` and `device_id`
+`object_id` is a concatination with `-` of `terrasense`, `terrarium_id` and `device_id`
 
 
 Example:  
-`homeassistant/sensor/terrariums-rainforest_01-ssr_heatinglamp/config`
+`homeassistant/sensor/terrasense-rainforest_01-ssr_heatinglamp/config`
 
 Payload contains `state_topic`, `command_topic` (if applicable), `device`, `unique_id` (`unique_id` THE SAME AS `object_id`), etc.
 
@@ -40,8 +40,8 @@ Payload contains `state_topic`, `command_topic` (if applicable), `device`, `uniq
 
 | Topic type | Pattern | Example |
 |------------|---------|---------|
-| State (read-only) | `terrariums/<terrarium_id>/<component_type>/<device_id>/state` | `terrariums/rainforest_01/sensor/ambient_sht35/state` |
-| Command (write) | `terrariums/<terrarium_id>/<component_type>/<device_id>/command` | `terrariums/rainforest_01/switch/misting_ssr/command` |
+| State (read-only) | `terrasense/<terrarium_id>/<component_type>/<device_id>/state` | `terrasense/rainforest_01/sensor/ambient_sht35/state` |
+| Command (write) | `terrasense/<terrarium_id>/<component_type>/<device_id>/command` | `terrasense/rainforest_01/switch/misting_ssr/command` |
 
 **Rule:**  
 - `state` → device publishes measurements/status
@@ -55,8 +55,8 @@ Payload contains `state_topic`, `command_topic` (if applicable), `device`, `uniq
 - Component: `sensor`  
 - Device ID: `ds18b20_<serial_suffix>`  
 - Topics:  
-  - State: `terrariums/rainforest_01/sensor/ds18b20_toprightcorner/state` (payload: `{"temperature": 25.3}`)  
-  - Auto-discovery: `homeassistant/sensor/terrariums-rainforest_01-_ds18b20_toprightcorner/config`
+  - State: `terrasense/rainforest_01/sensor/ds18b20_toprightcorner/state` (payload: `{"temperature": 25.3}`)  
+  - Auto-discovery: `homeassistant/sensor/terrasense-rainforest_01-_ds18b20_toprightcorner/config`
 
 #### **I2C – SHT35 (temperature + humidity)**  
 Treat as two separate sensors or one device with multiple state topics.  
@@ -66,8 +66,8 @@ Recommended: separate devices for clarity.
 - Humidity device: `sht35_humidity`  
 
 State topics:  
-`terrariums/rainforest_01/sensor/sht35_bottom_temperature/state` → `{"temperature": 23.5}`  
-`terrariums/rainforest_01/sensor/sht35_bottom_humidity/state` → `{"humidity": 58.2}`  
+`terrasense/rainforest_01/sensor/sht35_bottom_temperature/state` → `{"temperature": 23.5}`  
+`terrasense/rainforest_01/sensor/sht35_bottom_humidity/state` → `{"humidity": 58.2}`  
 
 *(Optional: single device with `state` publishing `{"temperature": x, "humidity": y}` – less granular but simpler.)*
 
@@ -75,23 +75,23 @@ State topics:
 #### **Simple I/O – XKC-Y25 (water detection)**  
 Component: `binary_sensor`  
 Device ID: `water_detector_suffix`  
-State topic: `terrariums/rainforest_01/binary_sensor/water_detector_suffix/state` (payload: `{"water_detected": true}` or just `1`/`0`)
+State topic: `terrasense/rainforest_01/binary_sensor/water_detector_suffix/state` (payload: `{"water_detected": true}` or just `1`/`0`)
 
 ### Actuators
 
 #### **Simple I/O – SSR (Misting, Lights, Heating)**  
 Component: `switch` 
 Device ID: `ssr_misting`, `ssr_lights`, `ssr_heater`  
-Command topic: `terrariums/rainforest_01/switch/ssr_misting/command` (payload: `ON`/`OFF`)  
+Command topic: `terrasense/rainforest_01/switch/ssr_misting/command` (payload: `ON`/`OFF`)  
 
 #### **Fan Control – 3‑pin & 4‑pin fans**  
 For 3‑pin (voltage control) / 4‑pin (PWM) – both benefit from separate speed control.  
 
 Component: `fan` (Home Assistant supports fan component)  
 Device ID: `fanpwm_1`  
-Command topic: `terrariums/rainforest_01/fan/fanpwm_1/command`  
+Command topic: `terrasense/rainforest_01/fan/fanpwm_1/command`  
 Payload: `ON`/`OFF` or `{"speed": 128}` (0–255)  
-State topic: `terrariums/rainforest_01/fan/fanpwm_1/state`  
+State topic: `terrasense/rainforest_01/fan/fanpwm_1/state`  
 
 
 

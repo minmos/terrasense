@@ -20,11 +20,16 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
         case HA_ENTITY_NUMBER: component_str = "number"; break;
         default: return false;
     }
-    const char *discovery_id = config->unique_id ? config->unique_id : config->device_id; // autodiscovery uses unique id if specified, needed for SHT35 where a single device has 2 measurements, here same device id but different unique di
+    const char *discovery_id = config->unique_id ? config->unique_id : config->device_id; 
 
     char discovery_topic[256];
     char state_topic[256];
     char command_topic[256];
+    char full_unique_id[128];
+
+    // unique id is terrarium and discovery id specific
+    snprintf(full_unique_id, sizeof(full_unique_id), "%s-%s-%s", MQTT_DOMAIN_PREFIX, TERRARIUM_ID, discovery_id);
+
     snprintf(discovery_topic, sizeof(discovery_topic), MQTT_HASS_AUTODISCOVERY_TOPIC("%s", "%s"), component_str, discovery_id);
     snprintf(state_topic, sizeof(state_topic), MQTT_STATE_TOPIC("%s", "%s"), component_str, config->device_id);
     if (config->type == HA_ENTITY_SWITCH || config->type == HA_ENTITY_FAN || config->type == HA_ENTITY_NUMBER) {
@@ -34,7 +39,7 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     // mqtt autodiscovery is a basic json object
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "name", config->name);
-    cJSON_AddStringToObject(root, "unique_id", discovery_id); 
+    cJSON_AddStringToObject(root, "unique_id", full_unique_id); 
     cJSON_AddStringToObject(root, "state_topic", state_topic);
     if (config->device_class) cJSON_AddStringToObject(root, "device_class", config->device_class);
     if (config->state_class) cJSON_AddStringToObject(root, "state_class", config->state_class);
@@ -78,5 +83,8 @@ bool hass_discovery_publish(const ha_discovery_config_t *config)
     free(json_string);
     cJSON_Delete(root);
     SYS_LOG("WE did autodiscovery for device_id: %s", discovery_id);
+
+    vTaskDelay(pdMS_TO_TICKS(50));
+
     return success;
 }
